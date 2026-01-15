@@ -331,7 +331,7 @@ namespace QCEDL.Client
                 Console.WriteLine();
 
                 LUNStream test = new(Firehose, i, storageType);
-                ConvertDD2VHD($@"{VhdxOutputPath}\LUN{i}.vhdx", (uint)storageInfo.storage_info.block_size, test);
+                ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{i}.vhdx"), (uint)storageInfo.storage_info.block_size, test);
                 Console.WriteLine();
             }
         }
