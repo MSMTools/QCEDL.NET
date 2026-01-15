@@ -7,7 +7,7 @@ namespace QCEDL.Client.USB
         private static readonly Guid COMPortGuid = new("{86E0D1E0-8089-11D0-9CE4-08003E301F73}");
         private static readonly Guid WinUSBGuid = new("{71DE994D-8B7C-43DB-A27E-2AE7CD579A0C}");
 
-        public static void FindEDLDevices()
+        public void FindEDLDevices()
         {
             foreach ((string, string) deviceInfo in USBExtensions.GetDeviceInfos(COMPortGuid))
             {
@@ -20,7 +20,7 @@ namespace QCEDL.Client.USB
             }
         }
 
-        public static void GetEmergencyPathType(Guid Guid, (string, string) deviceInfo)
+        public void GetEmergencyPathType(Guid Guid, (string, string) deviceInfo)
         {
             string DevicePath = deviceInfo.Item1;
             string BusName = deviceInfo.Item2;
@@ -44,7 +44,7 @@ namespace QCEDL.Client.USB
                             Console.WriteLine("Mode: Qualcomm Emergency Download 9008");
                         }
 
-                        OnQualcommEmergencyDownloadDeviceDetected(DevicePath);
+                        InternalOnQualcommEmergencyDownloadDeviceDetected(DevicePath);
                     }
                     else if (BusName == "QHSUSB_ARMPRG")
                     {
@@ -61,22 +61,29 @@ namespace QCEDL.Client.USB
                             Console.WriteLine("Mode: Qualcomm Emergency Flash 9008");
                         }
 
-                        OnQualcommEmergencyFlashDeviceDetected(DevicePath);
+                        InternalOnQualcommEmergencyFlashDeviceDetected(DevicePath);
                     }
                 }
             }
         }
 
-        private static void OnQualcommEmergencyFlashDeviceDetected(string DevicePath)
+        private void InternalOnQualcommEmergencyFlashDeviceDetected(string DevicePath)
         {
             Console.WriteLine("Qualcomm Emergency Flash 9008 device detected");
+
+            OnQualcommEmergencyFlashDeviceDetected?.Invoke(DevicePath);
         }
 
-        private static void OnQualcommEmergencyDownloadDeviceDetected(string DevicePath)
+        private void InternalOnQualcommEmergencyDownloadDeviceDetected(string DevicePath)
         {
             Console.WriteLine("Qualcomm Emergency Download 9008 device detected");
 
-            TestCode.TestProgrammer(DevicePath, @"C:\Users\gus33\Documents\prog_firehose_lite.elf").Wait();
+            OnQualcommEmergencyDownloadDeviceDetected?.Invoke(DevicePath);
         }
+
+        public delegate void DeviceFound(string DevicePath);
+
+        public event DeviceFound? OnQualcommEmergencyDownloadDeviceDetected;
+        public event DeviceFound? OnQualcommEmergencyFlashDeviceDetected;
     }
 }

@@ -2,7 +2,7 @@
 using Qualcomm.EmergencyDownload.Layers.APSS.Fast;
 using Qualcomm.EmergencyDownload.Transport;
 
-namespace QCEDL.Client
+namespace QCEDL.Client.Testing
 {
     internal class FastTestRM808
     {

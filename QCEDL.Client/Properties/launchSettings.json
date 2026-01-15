@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "QCEDL.Client": {
+      "commandName": "Project",
+      "commandLineArgs": "firehose-reset -f \"C:\\Users\\Gus\\Documents\\prog_firehose_ddr.elf\""
+    }
+  }
+}
