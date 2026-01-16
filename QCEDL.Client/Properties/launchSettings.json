@@ -1,7 +1,8 @@
 {
   "profiles": {
     "QCEDL.Client": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "firehose-dumpstorage -f \"C:\\Users\\Gus\\Downloads\\Telegram Desktop\\prog_firehose_lite.elf\" -s SPINOR -o ."
     }
   }
 }

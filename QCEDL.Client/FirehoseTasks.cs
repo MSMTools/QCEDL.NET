@@ -44,6 +44,10 @@ namespace QCEDL.Client
             if (mainInfo != null)
             {
                 int totalLuns = mainInfo.storage_info.num_physical;
+                if (totalLuns == 0)
+                {
+                    totalLuns = 1;
+                }
 
                 // Now figure out the size of each lun
                 for (int i = 0; i < totalLuns; i++)
@@ -282,6 +286,7 @@ namespace QCEDL.Client
                 switch (storageType)
                 {
                     case StorageType.UFS:
+                    case StorageType.SPINOR:
                         {
                             DumpUFSDevice(Firehose, VhdxOutputPath, storageType);
                             break;
@@ -312,6 +317,10 @@ namespace QCEDL.Client
             if (mainInfo != null)
             {
                 int totalLuns = mainInfo.storage_info.num_physical;
+                if (totalLuns == 0)
+                {
+                    totalLuns = 1;
+                }
 
                 // Now figure out the size of each lun
                 for (int i = 0; i < totalLuns; i++)
