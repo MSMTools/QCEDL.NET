@@ -2,7 +2,7 @@
   "profiles": {
     "QCEDL.Client": {
       "commandName": "Project",
-      "commandLineArgs": "firehose-reset -f \"C:\\Users\\Gus\\Documents\\prog_firehose_ddr.elf\" -v -p ResetToEDL"
+      "commandLineArgs": "firehose-readstorageinfo -f \"C:\\Users\\Gus\\Downloads\\Telegram Desktop\\prog_firehose_lite.elf\" -s UFS"
     }
   }
 }

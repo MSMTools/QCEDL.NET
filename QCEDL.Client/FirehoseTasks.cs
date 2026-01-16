@@ -43,14 +43,12 @@ namespace QCEDL.Client
             Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
             if (mainInfo != null)
             {
+                luStorageInfos.Add(mainInfo);
+
                 int totalLuns = mainInfo.storage_info.num_physical;
-                if (totalLuns == 0)
-                {
-                    totalLuns = 1;
-                }
 
                 // Now figure out the size of each lun
-                for (int i = 0; i < totalLuns; i++)
+                for (int i = 1; i < totalLuns; i++)
                 {
                     Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
                     luStorageInfos.Add(luInfo);
@@ -61,6 +59,7 @@ namespace QCEDL.Client
             {
                 Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[i];
 
+                Logging.Log();
                 Logging.Log($"LUN[{i}] Name: {storageInfo.storage_info.prod_name}");
                 Logging.Log($"LUN[{i}] Total Blocks: {storageInfo.storage_info.total_blocks}");
                 Logging.Log($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
@@ -305,7 +304,6 @@ namespace QCEDL.Client
                 else
                 {
                     Firehose.Configure(storageType, Verbose);
-                    Firehose.GetStorageInfo(Verbose, storageType);
 
                     ReadGPTs(Firehose, storageType, Verbose);
                 }
@@ -336,7 +334,6 @@ namespace QCEDL.Client
                 else
                 {
                     Firehose.Configure(storageType, Verbose);
-                    Firehose.GetStorageInfo(Verbose, storageType);
 
                     switch (storageType)
                     {
@@ -372,14 +369,12 @@ namespace QCEDL.Client
             Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
             if (mainInfo != null)
             {
+                luStorageInfos.Add(mainInfo);
+
                 int totalLuns = mainInfo.storage_info.num_physical;
-                if (totalLuns == 0)
-                {
-                    totalLuns = 1;
-                }
 
                 // Now figure out the size of each lun
-                for (int i = 0; i < totalLuns; i++)
+                for (int i = 1; i < totalLuns; i++)
                 {
                     Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
                     luStorageInfos.Add(luInfo);
@@ -390,6 +385,7 @@ namespace QCEDL.Client
             {
                 Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[i];
 
+                Logging.Log();
                 Logging.Log($"LUN[{i}] Name: {storageInfo.storage_info.prod_name}");
                 Logging.Log($"LUN[{i}] Total Blocks: {storageInfo.storage_info.total_blocks}");
                 Logging.Log($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
