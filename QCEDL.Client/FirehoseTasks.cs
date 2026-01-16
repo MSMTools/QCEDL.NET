@@ -7,6 +7,7 @@ using Qualcomm.EmergencyDownload.Layers.APSS.Firehose;
 using Qualcomm.EmergencyDownload.Layers.APSS.Firehose.Xml.Elements;
 using Qualcomm.EmergencyDownload.Layers.PBL.Sahara;
 using Qualcomm.EmergencyDownload.Transport;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using System.Xml;
@@ -87,11 +88,30 @@ namespace QCEDL.Client
             }
         }
 
+        private static string ConvertCharArrayToASCIIString(char[] carr)
+        {
+            return Encoding.ASCII.GetString([.. carr.Select(x => (byte)x)]).Replace("\0", "");
+        }
+
         private static void PrintGPTPartitions(GPT GPT)
         {
+            List<(GPTPartition, string)> partitions = [];
             foreach (GPTPartition partition in GPT.Partitions)
             {
-                Logging.Log($"Name: {Encoding.ASCII.GetString([.. partition.Name.Select(x => (byte)x)])}\t, Type: {partition.TypeGUID}, ID: {partition.UID}, StartLBA: 0x{partition.FirstLBA:X16}, EndLBA: 0x{partition.LastLBA:X16}, Attributes: 0x{partition.Attributes:X16}");
+                partitions.Add((partition, ConvertCharArrayToASCIIString(partition.Name)));
+            }
+
+            int maxLength = partitions.Count > 0 ? partitions.MaxBy(t => t.Item2.Length).Item2.Length : 0;
+
+            foreach ((GPTPartition partition, string name) in partitions)
+            {
+                string paddedName = name;
+                if (paddedName.Length < maxLength)
+                {
+                    paddedName += new string(' ', maxLength - name.Length);
+                }
+
+                Logging.Log($"Name: {paddedName}, Type: {partition.TypeGUID}, ID: {partition.UID}, StartLBA: 0x{partition.FirstLBA:X16}, EndLBA: 0x{partition.LastLBA:X16}, Attributes: 0x{partition.Attributes:X16}, SizeLBA: 0x{(partition.LastLBA - partition.FirstLBA + 1):X16}");
             }
         }
 
@@ -321,7 +341,7 @@ namespace QCEDL.Client
 
         internal static async Task FirehoseDumpStorage(string DevicePath, string ProgrammerPath, string VhdxOutputPath, StorageType storageType, bool Verbose)
         {
-            Logging.Log("START FirehoseReadStorageInfo");
+            Logging.Log("START FirehoseDumpStorage");
 
             try
             {
@@ -357,7 +377,7 @@ namespace QCEDL.Client
             finally
             {
                 Logging.Log();
-                Logging.Log("END FirehoseReadStorageInfo");
+                Logging.Log("END FirehoseDumpStorage");
             }
         }
 
@@ -447,5 +467,87 @@ namespace QCEDL.Client
                 $"{Logging.GetDISMLikeProgressBar((uint)(readBytes * 100 / totalBytes))} {speed}MB/s {remaining:hh\\:mm\\:ss\\.f}",
                 returnLine: Verbose);
         }
+
+        internal static async Task FirehoseDumpStorageLun(string DevicePath, string ProgrammerPath, string VhdxOutputPath, StorageType storageType, bool Verbose, int Lun)
+        {
+            Logging.Log("START FirehoseDumpStorageLun");
+
+            try
+            {
+                (QualcommSerial Serial, QualcommFirehose? Firehose) = await CommonFirehoseLoad(DevicePath, ProgrammerPath, Verbose);
+
+                if (Firehose == null)
+                {
+                    Logging.Log("Loading firehose failed.");
+                }
+                else
+                {
+                    Firehose.Configure(storageType, Verbose);
+
+                    switch (storageType)
+                    {
+                        case StorageType.UFS:
+                        case StorageType.SPINOR:
+                            {
+                                DumpUFSDeviceLun(Firehose, VhdxOutputPath, storageType, Verbose, Lun);
+                                break;
+                            }
+                        default:
+                            {
+                                throw new NotImplementedException();
+                            }
+                    }
+                }
+            }
+            catch (Exception Ex)
+            {
+                Logging.Log(Ex.ToString());
+            }
+            finally
+            {
+                Logging.Log();
+                Logging.Log("END FirehoseDumpStorageLun");
+            }
+        }
+
+        private static void DumpUFSDeviceLun(QualcommFirehose Firehose, string VhdxOutputPath, StorageType storageType, bool Verbose, int Lun)
+        {
+            List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
+
+            // Figure out the number of LUNs first.
+            Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
+            if (mainInfo != null)
+            {
+                luStorageInfos.Add(mainInfo);
+
+                int totalLuns = mainInfo.storage_info.num_physical;
+
+                // Now figure out the size of each lun
+                for (int i = 1; i < totalLuns; i++)
+                {
+                    Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
+                    luStorageInfos.Add(luInfo);
+                }
+            }
+
+            if (luStorageInfos.Count <= Lun)
+            {
+                Logging.Log("Lun not found.");
+                return;
+            }
+
+            Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[Lun];
+
+            Logging.Log();
+            Logging.Log($"LUN[{Lun}] Name: {storageInfo.storage_info.prod_name}");
+            Logging.Log($"LUN[{Lun}] Total Blocks: {storageInfo.storage_info.total_blocks}");
+            Logging.Log($"LUN[{Lun}] Block Size: {storageInfo.storage_info.block_size}");
+            Logging.Log();
+
+            LUNStream test = new(Firehose, Lun, storageType, Verbose);
+            ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{Lun}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose);
+            Logging.Log();
+        }
+
     }
 }

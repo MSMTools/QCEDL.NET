@@ -95,7 +95,7 @@ namespace QCEDL.NET.PartitionTable
 
                         GPTPartition gptpartition = StructureFromBytes<GPTPartition>(partitionEntryBuffer);
 
-                        if (gptpartition.TypeGUID == Guid.Empty)
+                        if (partitionEntryBuffer.Sum(t => t) == 0)
                         {
                             num = gptheader.PartitionEntryCount;
                             reflectPartitionEntryCount = false;

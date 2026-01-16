@@ -2,7 +2,7 @@
   "profiles": {
     "QCEDL.Client": {
       "commandName": "Project",
-      "commandLineArgs": "firehose-readstorageinfo -f \"C:\\Users\\Gus\\Downloads\\Telegram Desktop\\prog_firehose_lite.elf\" -s UFS"
+      "commandLineArgs": "firehose-dumpstoragelun -f \"C:\\Users\\Gus\\Downloads\\Telegram Desktop\\prog_firehose_lite.elf\" -s UFS -l 1 -o ."
     }
   }
 }
