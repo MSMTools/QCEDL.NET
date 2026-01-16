@@ -9,7 +9,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 {
     public static class QualcommFirehoseCommands
     {
-        public static bool Configure(this QualcommFirehose Firehose, StorageType storageType)
+        public static bool Configure(this QualcommFirehose Firehose, StorageType storageType, bool Verbose)
         {
             Console.WriteLine("Configuring");
 
@@ -30,7 +30,14 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                 {
                     if (data.Log != null)
                     {
-                        Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        if (Verbose)
+                        {
+                            Console.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        }
+                        else
+                        {
+                            Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        }
                     }
                     else if (data.Response != null)
                     {
@@ -72,7 +79,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
             return ResponseBuffer;
         }
 
-        public static byte[] Read(this QualcommFirehose Firehose, StorageType storageType, uint LUNi, uint sectorSize, uint FirstSector, uint LastSector)
+        public static byte[] Read(this QualcommFirehose Firehose, StorageType storageType, uint LUNi, uint sectorSize, uint FirstSector, uint LastSector, bool Verbose)
         {
             Debug.WriteLine("READ: FirstSector: " + FirstSector + " - LastSector: " + LastSector + " - SectorSize: " + sectorSize);
             //Console.WriteLine("Read");
@@ -94,7 +101,14 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                 {
                     if (data.Log != null)
                     {
-                        Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        if (Verbose)
+                        {
+                            Console.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        }
+                        else
+                        {
+                            Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        }
                     }
                     else if (data.Response != null)
                     {
@@ -140,7 +154,14 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                 {
                     if (data.Log != null)
                     {
-                        Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        if (Verbose)
+                        {
+                            Console.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        }
+                        else
+                        {
+                            Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        }
                     }
                     else if (data.Response != null)
                     {
@@ -168,7 +189,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
             return readBuffer;
         }
 
-        public static bool Reset(this QualcommFirehose Firehose, PowerValue powerValue = PowerValue.Reset, uint delayInSeconds = 1)
+        public static bool Reset(this QualcommFirehose Firehose, bool Verbose, PowerValue powerValue = PowerValue.Reset, uint delayInSeconds = 1)
         {
             Console.WriteLine("Rebooting phone");
 
@@ -189,7 +210,14 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                 {
                     if (data.Log != null)
                     {
-                        Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        if (Verbose)
+                        {
+                            Console.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        }
+                        else
+                        {
+                            Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        }
                     }
                     else if (data.Response != null)
                     {
@@ -222,7 +250,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
             return true;
         }
 
-        public static JSON.StorageInfo.Root? GetStorageInfo(this QualcommFirehose Firehose, StorageType storageType = StorageType.UFS, uint PhysicalPartitionNumber = 0)
+        public static JSON.StorageInfo.Root? GetStorageInfo(this QualcommFirehose Firehose, bool Verbose, StorageType storageType = StorageType.UFS, uint PhysicalPartitionNumber = 0)
         {
             Console.WriteLine("Getting Storage Info");
 
@@ -248,8 +276,15 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                         {
                             storageInfoJson = data.Log.Value.Substring(6);
                         }
-
-                        Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        
+                        if (Verbose)
+                        {
+                            Console.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        }
+                        else
+                        {
+                            Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                        }
                     }
                     else if (data.Response != null)
                     {

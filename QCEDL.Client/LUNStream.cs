@@ -10,17 +10,19 @@ namespace QCEDL.Client
         private readonly Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo;
         private readonly StorageType storageType;
         private long currentPosition;
+        private readonly bool Verbose;
 
-        public LUNStream(QualcommFirehose Firehose, int physicalPartitionNumber, StorageType storageType)
+        public LUNStream(QualcommFirehose Firehose, int physicalPartitionNumber, StorageType storageType, bool Verbose)
         {
             this.Firehose = Firehose;
             this.physicalPartitionNumber = physicalPartitionNumber;
             this.storageType = storageType;
 
-            Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root luInfo = Firehose.GetStorageInfo(storageType, (uint)physicalPartitionNumber) ?? throw new Exception($"Error in reading LUN {physicalPartitionNumber} for storage info!");
+            Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)physicalPartitionNumber) ?? throw new Exception($"Error in reading LUN {physicalPartitionNumber} for storage info!");
 
             storageInfo = luInfo;
             currentPosition = 0;
+            this.Verbose = Verbose;
         }
 
         public override bool CanRead => true;
@@ -39,22 +41,13 @@ namespace QCEDL.Client
                     throw new ArgumentOutOfRangeException(nameof(value));
                 }
 
-                // Workaround for malformed MBRs
-                /*if (currentPosition > Length)
-                {
-                    throw new EndOfStreamException();
-                }*/
-
                 currentPosition = value;
             }
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (buffer == null)
-            {
-                throw new ArgumentNullException(nameof(buffer));
-            }
+            ArgumentNullException.ThrowIfNull(buffer);
 
             if (offset + count > buffer.Length)
             {
@@ -62,11 +55,7 @@ namespace QCEDL.Client
             }
 
             ArgumentOutOfRangeException.ThrowIfNegative(offset);
-
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
+            ArgumentOutOfRangeException.ThrowIfNegative(count);
 
             // Workaround for malformed MBRs
             if (Position >= Length)
@@ -107,7 +96,7 @@ namespace QCEDL.Client
             // The last block we have to read (excluding)
             long endBlockIndex = noOverflowBlockEndByteCount / blockSize;
 
-            byte[] blocksOnDevice = Firehose.Read(storageType, (uint)physicalPartitionNumber, (uint)blockSize, (uint)startBlockIndex, (uint)endBlockIndex - 1);
+            byte[] blocksOnDevice = Firehose.Read(storageType, (uint)physicalPartitionNumber, (uint)blockSize, (uint)startBlockIndex, (uint)endBlockIndex - 1, Verbose);
 
             Array.Copy(blocksOnDevice, overflowBlockStartByteCount, buffer, offset, readBytes);
 
@@ -140,12 +129,6 @@ namespace QCEDL.Client
 
             Position += readBytes;
 
-            if (Position == Length)
-            {
-                // Workaround for malformed MBRs
-                //return 0;
-            }
-
             return (int)readBytes;
         }
 
@@ -170,7 +153,7 @@ namespace QCEDL.Client
                     }
                 default:
                     {
-                        throw new ArgumentException(nameof(origin));
+                        throw new ArgumentException(null, nameof(origin));
                     }
             }
 

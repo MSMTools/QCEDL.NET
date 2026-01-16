@@ -30,7 +30,7 @@ namespace QCEDL.Client
 
             usbNotifier.OnQualcommEmergencyDownloadDeviceDetected += DevicePath =>
             {
-                FirehoseTasks.FirehoseLoad(DevicePath, opts.Firehose).Wait();
+                FirehoseTasks.FirehoseLoad(DevicePath, opts.Firehose, opts.Verbose).Wait();
             };
 
             usbNotifier.FindEDLDevices();
@@ -44,7 +44,7 @@ namespace QCEDL.Client
 
             usbNotifier.OnQualcommEmergencyDownloadDeviceDetected += DevicePath =>
             {
-                FirehoseTasks.FirehoseReset(DevicePath, opts.Firehose).Wait();
+                FirehoseTasks.FirehoseReset(DevicePath, opts.Firehose, opts.Verbose).Wait();
             };
 
             usbNotifier.FindEDLDevices();
@@ -58,7 +58,7 @@ namespace QCEDL.Client
 
             usbNotifier.OnQualcommEmergencyDownloadDeviceDetected += DevicePath =>
             {
-                FirehoseTasks.FirehoseReadStorageInfo(DevicePath, opts.Firehose, opts.StorageType).Wait();
+                FirehoseTasks.FirehoseReadStorageInfo(DevicePath, opts.Firehose, opts.StorageType, opts.Verbose).Wait();
             };
 
             usbNotifier.FindEDLDevices();
@@ -72,7 +72,7 @@ namespace QCEDL.Client
 
             usbNotifier.OnQualcommEmergencyDownloadDeviceDetected += DevicePath =>
             {
-                FirehoseTasks.FirehoseDumpStorage(DevicePath, opts.Firehose, opts.VhdxOutputPath, opts.StorageType).Wait();
+                FirehoseTasks.FirehoseDumpStorage(DevicePath, opts.Firehose, opts.VhdxOutputPath, opts.StorageType, opts.Verbose).Wait();
             };
 
             usbNotifier.FindEDLDevices();

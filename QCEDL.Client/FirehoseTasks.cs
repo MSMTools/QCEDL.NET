@@ -16,15 +16,15 @@ namespace QCEDL.Client
 {
     internal class FirehoseTasks
     {
-        private static byte[] ReadGPTBuffer(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition)
+        private static byte[] ReadGPTBuffer(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition, bool Verbose)
         {
             // Read 6 sectors
-            return Firehose.Read(storageType, physicalPartition, sectorSize, 0, 5);
+            return Firehose.Read(storageType, physicalPartition, sectorSize, 0, 5, Verbose);
         }
 
-        private static GPT ReadGPT(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition)
+        private static GPT ReadGPT(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition, bool Verbose)
         {
-            byte[] GPTLUN = ReadGPTBuffer(Firehose, sectorSize, storageType, physicalPartition);
+            byte[] GPTLUN = ReadGPTBuffer(Firehose, sectorSize, storageType, physicalPartition, Verbose);
 
             if (GPTLUN == null)
             {
@@ -35,12 +35,12 @@ namespace QCEDL.Client
             return GPT.ReadFromStream(stream, (int)sectorSize);
         }
 
-        private static void ReadGPTs(QualcommFirehose Firehose, StorageType storageType)
+        private static void ReadGPTs(QualcommFirehose Firehose, StorageType storageType, bool Verbose)
         {
             List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
 
             // Figure out the number of LUNs first.
-            Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(storageType);
+            Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
             if (mainInfo != null)
             {
                 int totalLuns = mainInfo.storage_info.num_physical;
@@ -52,7 +52,7 @@ namespace QCEDL.Client
                 // Now figure out the size of each lun
                 for (int i = 0; i < totalLuns; i++)
                 {
-                    Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
+                    Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
                     luStorageInfos.Add(luInfo);
                 }
             }
@@ -61,29 +61,29 @@ namespace QCEDL.Client
             {
                 Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[i];
 
-                Console.WriteLine($"LUN[{i}] Name: {storageInfo.storage_info.prod_name}");
-                Console.WriteLine($"LUN[{i}] Total Blocks: {storageInfo.storage_info.total_blocks}");
-                Console.WriteLine($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
-                Console.WriteLine();
+                Logging.Log($"LUN[{i}] Name: {storageInfo.storage_info.prod_name}");
+                Logging.Log($"LUN[{i}] Total Blocks: {storageInfo.storage_info.total_blocks}");
+                Logging.Log($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
+                Logging.Log();
 
                 GPT GPT = null;
 
                 try
                 {
-                    GPT = ReadGPT(Firehose, (uint)storageInfo.storage_info.block_size, storageType, (uint)i);
+                    GPT = ReadGPT(Firehose, (uint)storageInfo.storage_info.block_size, storageType, (uint)i, Verbose);
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
+                    Logging.Log(e.ToString());
                 }
 
                 if (GPT == null)
                 {
-                    Console.WriteLine($"LUN {i}: No GPT found");
+                    Logging.Log($"LUN {i}: No GPT found");
                     continue;
                 }
 
-                Console.WriteLine($"LUN {i}:");
+                Logging.Log($"LUN {i}:");
                 PrintGPTPartitions(GPT);
             }
         }
@@ -92,18 +92,21 @@ namespace QCEDL.Client
         {
             foreach (GPTPartition partition in GPT.Partitions)
             {
-                Console.WriteLine($"Name: {Encoding.ASCII.GetString([.. partition.Name.Select(x => (byte)x)])}, Type: {partition.TypeGUID}, ID: {partition.UID}, StartLBA: {partition.FirstLBA}, EndLBA: {partition.LastLBA}");
+                Logging.Log($"Name: {Encoding.ASCII.GetString([.. partition.Name.Select(x => (byte)x)])}, Type: {partition.TypeGUID}, ID: {partition.UID}, StartLBA: {partition.FirstLBA}, EndLBA: {partition.LastLBA}");
             }
         }
 
-        private static async Task<(QualcommSerial, QualcommFirehose?)> CommonFirehoseLoad(string DevicePath, string ProgrammerPath)
+        private static async Task<(QualcommSerial, QualcommFirehose?)> CommonFirehoseLoad(string DevicePath, string ProgrammerPath, bool Verbose)
         {
-            Console.WriteLine();
-            Console.WriteLine("Starting Firehose BootUp");
-            Console.WriteLine();
+            Logging.Log();
+            Logging.Log("Starting Firehose BootUp");
+            Logging.Log();
 
             // Send and start programmer
             QualcommSerial Serial = new(DevicePath);
+
+            bool PassedHandShake = false;
+            bool PassedRKH = false;
 
             try
             {
@@ -111,7 +114,11 @@ namespace QCEDL.Client
 
                 Sahara.CommandHandshake();
 
+                PassedHandShake = true;
+
                 byte[][] RKHs = Sahara.GetRKHs();
+                PassedRKH = true;
+
                 byte[] SN = Sahara.GetSerialNumber();
 
                 for (int i = 0; i < RKHs.Length; i++)
@@ -129,191 +136,240 @@ namespace QCEDL.Client
                         }
                     }
 
-                    Console.WriteLine($"RKH[{i}]: {RKHAsString} ({FriendlyName})");
+                    Logging.Log($"RKH[{i}]: {RKHAsString} ({FriendlyName})");
                 }
 
                 byte[] HWID = Sahara.GetHWID();
                 HardwareID.ParseHWID(HWID);
 
-                Console.WriteLine($"Serial Number: {Convert.ToHexString(SN)}");
+                Logging.Log($"Serial Number: {Convert.ToHexString(SN)}");
+
+                Logging.Log();
+
+                using FileStream FileStream = new(ProgrammerPath, FileMode.Open, FileAccess.Read);
 
                 Sahara.SwitchMode(QualcommSaharaMode.ImageTXPending);
 
-                Console.WriteLine();
-
-                if (!await Sahara.LoadProgrammer(ProgrammerPath))
+                if (!await Sahara.LoadProgrammer(FileStream))
                 {
-                    Console.WriteLine("Emergency programmer test failed");
+                    Logging.Log("Emergency programmer test failed");
                     return (Serial, null);
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Debug.WriteLine(e.ToString());
             }
 
-            Console.WriteLine();
+            Logging.Log();
 
             QualcommFirehose Firehose = new(Serial);
 
-            bool RawMode = false;
-            bool GotResponse = false;
-
-            try
+            if (PassedHandShake && !PassedRKH)
             {
-                while (!GotResponse)
+                Logging.Log("Device successfully performed sahara handshake but failed retrieving RKH information. Assuming device is already booted into a programmer.");
+                return (Serial, Firehose);
+            }
+            else if (!PassedHandShake)
+            {
+                Logging.Log("Device failed to perform sahara handshake.");
+                return (Serial, null);
+            }
+
+            if (PassedHandShake && PassedRKH)
+            {
+                bool RawMode = false;
+                bool GotResponse = false;
+
+                try
                 {
-                    Data[] datas = Firehose.GetFirehoseResponseDataPayloads();
-
-                    foreach (Data data in datas)
+                    while (!GotResponse)
                     {
-                        if (data.Log != null)
+                        Data[] datas = Firehose.GetFirehoseResponseDataPayloads();
+
+                        foreach (Data data in datas)
                         {
-                            Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
-                        }
-                        else if (data.Response != null)
-                        {
-                            if (data.Response.RawMode)
+                            if (data.Log != null)
                             {
-                                RawMode = true;
+                                if (Verbose)
+                                {
+                                    Logging.Log("DEVPRG LOG: " + data.Log.Value);
+                                }
+                                else
+                                {
+                                    Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                                }
                             }
+                            else if (data.Response != null)
+                            {
+                                if (data.Response.RawMode)
+                                {
+                                    RawMode = true;
+                                }
 
-                            GotResponse = true;
-                        }
-                        else
-                        {
-                            XmlSerializer xmlSerializer = new(typeof(Data));
+                                GotResponse = true;
+                            }
+                            else
+                            {
+                                XmlSerializer xmlSerializer = new(typeof(Data));
 
-                            using StringWriter sww = new();
-                            using XmlWriter writer = XmlWriter.Create(sww);
+                                using StringWriter sww = new();
+                                using XmlWriter writer = XmlWriter.Create(sww);
 
-                            xmlSerializer.Serialize(writer, data);
+                                xmlSerializer.Serialize(writer, data);
 
-                            Console.WriteLine(sww.ToString());
+                                Logging.Log(sww.ToString());
+                            }
                         }
                     }
                 }
+                catch (BadConnectionException) { }
             }
-            catch (BadConnectionException) { }
 
             return (Serial, Firehose);
         }
 
-        internal static async Task FirehoseLoad(string DevicePath, string ProgrammerPath)
+        internal static async Task FirehoseLoad(string DevicePath, string ProgrammerPath, bool Verbose)
         {
-            Console.WriteLine("START FirehoseLoad");
+            Logging.Log("START FirehoseLoad");
 
             try
             {
-                await CommonFirehoseLoad(DevicePath, ProgrammerPath);
+                (QualcommSerial Serial, QualcommFirehose? Firehose) = await CommonFirehoseLoad(DevicePath, ProgrammerPath, Verbose);
+
+                if (Firehose == null)
+                {
+                    Logging.Log("Loading firehose failed.");
+                }
             }
             catch (Exception Ex)
             {
-                Console.WriteLine(Ex);
+                Logging.Log(Ex.ToString());
             }
             finally
             {
-                Console.WriteLine();
-                Console.WriteLine("END FirehoseLoad");
+                Logging.Log();
+                Logging.Log("END FirehoseLoad");
             }
         }
 
-        internal static async Task FirehoseReset(string DevicePath, string ProgrammerPath)
+        internal static async Task FirehoseReset(string DevicePath, string ProgrammerPath, bool Verbose)
         {
-            Console.WriteLine("START FirehoseReset");
+            Logging.Log("START FirehoseReset");
 
             try
             {
-                (QualcommSerial Serial, QualcommFirehose Firehose) = await CommonFirehoseLoad(DevicePath, ProgrammerPath);
+                (QualcommSerial Serial, QualcommFirehose? Firehose) = await CommonFirehoseLoad(DevicePath, ProgrammerPath, Verbose);
 
-                if (Firehose.Reset())
+                if (Firehose == null)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Emergency programmer test succeeded");
+                    Logging.Log("Loading firehose failed.");
                 }
                 else
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Emergency programmer test failed");
+                    if (Firehose.Reset(Verbose))
+                    {
+                        Logging.Log();
+                        Logging.Log("Emergency programmer test succeeded");
+                    }
+                    else
+                    {
+                        Logging.Log();
+                        Logging.Log("Emergency programmer test failed");
+                    }
                 }
             }
             catch (Exception Ex)
             {
-                Console.WriteLine(Ex);
+                Logging.Log(Ex.ToString());
             }
             finally
             {
-                Console.WriteLine();
-                Console.WriteLine("END FirehoseReset");
+                Logging.Log();
+                Logging.Log("END FirehoseReset");
             }
         }
 
-        internal static async Task FirehoseReadStorageInfo(string DevicePath, string ProgrammerPath, StorageType storageType)
+        internal static async Task FirehoseReadStorageInfo(string DevicePath, string ProgrammerPath, StorageType storageType, bool Verbose)
         {
-            Console.WriteLine("START FirehoseReadStorageInfo");
+            Logging.Log("START FirehoseReadStorageInfo");
 
             try
             {
-                (QualcommSerial Serial, QualcommFirehose Firehose) = await CommonFirehoseLoad(DevicePath, ProgrammerPath);
+                (QualcommSerial Serial, QualcommFirehose? Firehose) = await CommonFirehoseLoad(DevicePath, ProgrammerPath, Verbose);
 
-                Firehose.Configure(storageType);
-                Firehose.GetStorageInfo(storageType);
-
-                ReadGPTs(Firehose, storageType);
-            }
-            catch (Exception Ex)
-            {
-                Console.WriteLine(Ex);
-            }
-            finally
-            {
-                Console.WriteLine();
-                Console.WriteLine("END FirehoseReadStorageInfo");
-            }
-        }
-
-        internal static async Task FirehoseDumpStorage(string DevicePath, string ProgrammerPath, string VhdxOutputPath, StorageType storageType)
-        {
-            Console.WriteLine("START FirehoseReadStorageInfo");
-
-            try
-            {
-                (QualcommSerial Serial, QualcommFirehose Firehose) = await CommonFirehoseLoad(DevicePath, ProgrammerPath);
-
-                Firehose.Configure(storageType);
-                Firehose.GetStorageInfo(storageType);
-
-                switch (storageType)
+                if (Firehose == null)
                 {
-                    case StorageType.UFS:
-                    case StorageType.SPINOR:
-                        {
-                            DumpUFSDevice(Firehose, VhdxOutputPath, storageType);
-                            break;
-                        }
-                    default:
-                        {
-                            throw new NotImplementedException();
-                        }
+                    Logging.Log("Loading firehose failed.");
+                }
+                else
+                {
+                    Firehose.Configure(storageType, Verbose);
+                    Firehose.GetStorageInfo(Verbose, storageType);
+
+                    ReadGPTs(Firehose, storageType, Verbose);
                 }
             }
             catch (Exception Ex)
             {
-                Console.WriteLine(Ex);
+                Logging.Log(Ex.ToString());
             }
             finally
             {
-                Console.WriteLine();
-                Console.WriteLine("END FirehoseReadStorageInfo");
+                Logging.Log();
+                Logging.Log("END FirehoseReadStorageInfo");
             }
         }
 
-        private static void DumpUFSDevice(QualcommFirehose Firehose, string VhdxOutputPath, StorageType storageType)
+        internal static async Task FirehoseDumpStorage(string DevicePath, string ProgrammerPath, string VhdxOutputPath, StorageType storageType, bool Verbose)
+        {
+            Logging.Log("START FirehoseReadStorageInfo");
+
+            try
+            {
+                (QualcommSerial Serial, QualcommFirehose? Firehose) = await CommonFirehoseLoad(DevicePath, ProgrammerPath, Verbose);
+
+                if (Firehose == null)
+                {
+                    Logging.Log("Loading firehose failed.");
+                }
+                else
+                {
+                    Firehose.Configure(storageType, Verbose);
+                    Firehose.GetStorageInfo(Verbose, storageType);
+
+                    switch (storageType)
+                    {
+                        case StorageType.UFS:
+                        case StorageType.SPINOR:
+                            {
+                                DumpUFSDevice(Firehose, VhdxOutputPath, storageType, Verbose);
+                                break;
+                            }
+                        default:
+                            {
+                                throw new NotImplementedException();
+                            }
+                    }
+                }
+            }
+            catch (Exception Ex)
+            {
+                Logging.Log(Ex.ToString());
+            }
+            finally
+            {
+                Logging.Log();
+                Logging.Log("END FirehoseReadStorageInfo");
+            }
+        }
+
+        private static void DumpUFSDevice(QualcommFirehose Firehose, string VhdxOutputPath, StorageType storageType, bool Verbose)
         {
             List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
 
             // Figure out the number of LUNs first.
-            Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(storageType);
+            Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
             if (mainInfo != null)
             {
                 int totalLuns = mainInfo.storage_info.num_physical;
@@ -325,7 +381,7 @@ namespace QCEDL.Client
                 // Now figure out the size of each lun
                 for (int i = 0; i < totalLuns; i++)
                 {
-                    Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
+                    Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
                     luStorageInfos.Add(luInfo);
                 }
             }
@@ -334,14 +390,14 @@ namespace QCEDL.Client
             {
                 Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[i];
 
-                Console.WriteLine($"LUN[{i}] Name: {storageInfo.storage_info.prod_name}");
-                Console.WriteLine($"LUN[{i}] Total Blocks: {storageInfo.storage_info.total_blocks}");
-                Console.WriteLine($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
-                Console.WriteLine();
+                Logging.Log($"LUN[{i}] Name: {storageInfo.storage_info.prod_name}");
+                Logging.Log($"LUN[{i}] Total Blocks: {storageInfo.storage_info.total_blocks}");
+                Logging.Log($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
+                Logging.Log();
 
-                LUNStream test = new(Firehose, i, storageType);
-                ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{i}.vhdx"), (uint)storageInfo.storage_info.block_size, test);
-                Console.WriteLine();
+                LUNStream test = new(Firehose, i, storageType, Verbose);
+                ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{i}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose);
+                Logging.Log();
             }
         }
 
@@ -351,7 +407,7 @@ namespace QCEDL.Client
         /// <param name="ddfile">The path to the DD file.</param>
         /// <param name="vhdfile">The path to the output VHD file.</param>
         /// <returns></returns>
-        private static void ConvertDD2VHD(string vhdfile, uint SectorSize, Stream inputStream)
+        private static void ConvertDD2VHD(string vhdfile, uint SectorSize, Stream inputStream, bool Verbose)
         {
             SetupHelper.SetupContainers();
 
@@ -374,14 +430,14 @@ namespace QCEDL.Client
             long totalBytes = contentStream.Length;
 
             DateTime now = DateTime.Now;
-            pump.ProgressEvent += (o, e) => { ShowProgress((ulong)e.BytesRead, (ulong)totalBytes, now); };
+            pump.ProgressEvent += (o, e) => { ShowProgress((ulong)e.BytesRead, (ulong)totalBytes, now, Verbose); };
 
             Logging.Log("Converting RAW to VHDX");
             pump.Run();
-            Console.WriteLine();
+            Logging.Log();
         }
 
-        private static void ShowProgress(ulong readBytes, ulong totalBytes, DateTime startTime)
+        private static void ShowProgress(ulong readBytes, ulong totalBytes, DateTime startTime, bool Verbose)
         {
             DateTime now = DateTime.Now;
             TimeSpan timeSoFar = now - startTime;
@@ -393,7 +449,7 @@ namespace QCEDL.Client
 
             Logging.Log(
                 $"{Logging.GetDISMLikeProgressBar((uint)(readBytes * 100 / totalBytes))} {speed}MB/s {remaining:hh\\:mm\\:ss\\.f}",
-                returnLine: false);
+                returnLine: Verbose);
         }
     }
 }

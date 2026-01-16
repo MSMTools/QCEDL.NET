@@ -9,7 +9,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 {
     internal class QualcommFirehoseMMOVIP
     {
-        public static bool ConnectToProgrammer(QualcommSerial Serial, QualcommFirehose Firehose, byte[] PacketFromPcToProgrammer)
+        public static bool ConnectToProgrammer(QualcommSerial Serial, QualcommFirehose Firehose, byte[] PacketFromPcToProgrammer, bool Verbose)
         {
             // Behaviour of old firehose:
             // Takes about 20 ms to be started.
@@ -56,7 +56,14 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                     {
                         if (data.Log != null)
                         {
-                            Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                            if (Verbose)
+                            {
+                                Console.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                            }
+                            else
+                            {
+                                Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                            }
                         }
                         else if (data.Response != null)
                         {
@@ -84,7 +91,14 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                         {
                             if (data.Log != null)
                             {
-                                Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                                if (Verbose)
+                                {
+                                    Console.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                                }
+                                else
+                                {
+                                    Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                                }
                             }
                             else if (data.Response != null)
                             {
@@ -114,7 +128,14 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                         {
                             if (data.Log != null)
                             {
-                                Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                                if (Verbose)
+                                {
+                                    Console.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                                }
+                                else
+                                {
+                                    Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
+                                }
                             }
                             else if (data.Response != null)
                             {
@@ -155,7 +176,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
             return HandshakeCompleted;
         }
 
-        public static bool ConnectToProgrammerInTestMode(QualcommSerial Serial, QualcommFirehose Firehose)
+        public static bool ConnectToProgrammerInTestMode(QualcommSerial Serial, QualcommFirehose Firehose, bool Verbose)
         {
             byte[] HelloPacketFromPcToProgrammer = new byte[0x20C];
             ByteOperations.WriteUInt32(HelloPacketFromPcToProgrammer, 0, 0x57503730);     // WP70
@@ -163,7 +184,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
             ByteOperations.WriteUInt32(HelloPacketFromPcToProgrammer, 0x208, 0x57503730); // WP70
             ByteOperations.WriteUInt16(HelloPacketFromPcToProgrammer, 0x48, 0x4445);      // DE
 
-            bool HandshakeCompleted = ConnectToProgrammer(Serial, Firehose, HelloPacketFromPcToProgrammer);
+            bool HandshakeCompleted = ConnectToProgrammer(Serial, Firehose, HelloPacketFromPcToProgrammer, Verbose);
 
             if (HandshakeCompleted)
             {

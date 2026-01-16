@@ -20,6 +20,7 @@
 
 using Qualcomm.EmergencyDownload.Layers.PBL.Sahara.Command;
 using Qualcomm.EmergencyDownload.Transport;
+using System.Diagnostics;
 
 namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
 {
@@ -119,11 +120,11 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
             Serial.SendData(ImageBuffer);
         }
 
-        public bool SendImage(string Path)
+        public bool SendImage(FileStream FileStream)
         {
             bool Result = true;
 
-            Console.WriteLine("Sending programmer: " + Path);
+            Debug.WriteLine("Sending programmer");
 
             byte[] ImageBuffer = null;
             try
@@ -138,15 +139,13 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
                 // xxxxxxxx = Max packet length
                 // xxxxxxxx = Expected mode
                 // 6 dwords reserved space
-                Console.WriteLine("Protocol: 0x" + ByteOperations.ReadUInt32(Hello, 0x08).ToString("X8"));
-                Console.WriteLine("Supported: 0x" + ByteOperations.ReadUInt32(Hello, 0x0C).ToString("X8"));
-                Console.WriteLine("MaxLength: 0x" + ByteOperations.ReadUInt32(Hello, 0x10).ToString("X8"));
-                Console.WriteLine("Mode: 0x" + ByteOperations.ReadUInt32(Hello, 0x14).ToString("X8"));
+                Debug.WriteLine("Protocol: 0x" + ByteOperations.ReadUInt32(Hello, 0x08).ToString("X8"));
+                Debug.WriteLine("Supported: 0x" + ByteOperations.ReadUInt32(Hello, 0x0C).ToString("X8"));
+                Debug.WriteLine("MaxLength: 0x" + ByteOperations.ReadUInt32(Hello, 0x10).ToString("X8"));
+                Debug.WriteLine("Mode: 0x" + ByteOperations.ReadUInt32(Hello, 0x14).ToString("X8"));
 
                 byte[] HelloResponse = BuildHelloResponsePacket(QualcommSaharaMode.ImageTXPending);
                 Serial.SendData(HelloResponse);
-
-                using FileStream FileStream = new(Path, FileMode.Open, FileAccess.Read);
 
                 QualcommSaharaCommand CommandID = QualcommSaharaCommand.NoCommand;
 
@@ -177,7 +176,7 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
                             }
                         default:
                             {
-                                Console.WriteLine($"Unknown command: {CommandID.ToString("X8")}");
+                                Debug.WriteLine($"Unknown command: {CommandID:X8}");
                                 throw new BadConnectionException();
                             }
                     }
@@ -185,13 +184,13 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
             }
             catch (Exception Ex)
             {
-                Console.WriteLine(Ex);
+                Debug.WriteLine(Ex);
                 Result = false;
             }
 
             if (Result)
             {
-                Console.WriteLine("Programmer loaded into phone memory");
+                Debug.WriteLine("Programmer loaded into phone memory");
             }
 
             return Result;
@@ -213,10 +212,10 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
                 // xxxxxxxx = Max packet length
                 // xxxxxxxx = Expected mode
                 // 6 dwords reserved space
-                Console.WriteLine("Protocol: 0x" + ByteOperations.ReadUInt32(Hello, 0x08).ToString("X8"));
-                Console.WriteLine("Supported: 0x" + ByteOperations.ReadUInt32(Hello, 0x0C).ToString("X8"));
-                Console.WriteLine("MaxLength: 0x" + ByteOperations.ReadUInt32(Hello, 0x10).ToString("X8"));
-                Console.WriteLine("Mode: 0x" + ByteOperations.ReadUInt32(Hello, 0x14).ToString("X8"));
+                Debug.WriteLine("Protocol: 0x" + ByteOperations.ReadUInt32(Hello, 0x08).ToString("X8"));
+                Debug.WriteLine("Supported: 0x" + ByteOperations.ReadUInt32(Hello, 0x0C).ToString("X8"));
+                Debug.WriteLine("MaxLength: 0x" + ByteOperations.ReadUInt32(Hello, 0x10).ToString("X8"));
+                Debug.WriteLine("Mode: 0x" + ByteOperations.ReadUInt32(Hello, 0x14).ToString("X8"));
 
                 byte[] HelloResponse = BuildHelloResponsePacket(QualcommSaharaMode.ImageTXPending);
 
@@ -224,10 +223,10 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
             }
             catch (Exception ex)
             {
-                Console.WriteLine("An unexpected error happened");
-                Console.WriteLine(ex.GetType().ToString());
-                Console.WriteLine(ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                Debug.WriteLine("An unexpected error happened");
+                Debug.WriteLine(ex.GetType().ToString());
+                Debug.WriteLine(ex.Message);
+                Debug.WriteLine(ex.StackTrace);
 
                 Result = false;
             }
@@ -251,10 +250,10 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
                 // xxxxxxxx = Max packet length
                 // xxxxxxxx = Expected mode
                 // 6 dwords reserved space
-                Console.WriteLine("Protocol: 0x" + ByteOperations.ReadUInt32(Hello, 0x08).ToString("X8"));
-                Console.WriteLine("Supported: 0x" + ByteOperations.ReadUInt32(Hello, 0x0C).ToString("X8"));
-                Console.WriteLine("MaxLength: 0x" + ByteOperations.ReadUInt32(Hello, 0x10).ToString("X8"));
-                Console.WriteLine("Mode: 0x" + ByteOperations.ReadUInt32(Hello, 0x14).ToString("X8"));
+                Debug.WriteLine("Protocol: 0x" + ByteOperations.ReadUInt32(Hello, 0x08).ToString("X8"));
+                Debug.WriteLine("Supported: 0x" + ByteOperations.ReadUInt32(Hello, 0x0C).ToString("X8"));
+                Debug.WriteLine("MaxLength: 0x" + ByteOperations.ReadUInt32(Hello, 0x10).ToString("X8"));
+                Debug.WriteLine("Mode: 0x" + ByteOperations.ReadUInt32(Hello, 0x14).ToString("X8"));
 
                 byte[] HelloResponse = BuildHelloResponsePacket(QualcommSaharaMode.Command);
 
@@ -269,10 +268,10 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
             }
             catch (Exception ex)
             {
-                Console.WriteLine("An unexpected error happened");
-                Console.WriteLine(ex.GetType().ToString());
-                Console.WriteLine(ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                Debug.WriteLine("An unexpected error happened");
+                Debug.WriteLine(ex.GetType().ToString());
+                Debug.WriteLine(ex.Message);
+                Debug.WriteLine(ex.StackTrace);
 
                 Result = false;
             }
@@ -311,7 +310,7 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
 
         public void StartProgrammer()
         {
-            Console.WriteLine("Starting programmer");
+            Debug.WriteLine("Starting programmer");
             byte[] DoneCommand = BuildCommandPacket(QualcommSaharaCommand.Done);
 
             bool Started = false;
@@ -327,22 +326,22 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
                 }
                 catch (BadConnectionException)
                 {
-                    Console.WriteLine("Problem while starting programmer. Attempting again.");
+                    Debug.WriteLine("Problem while starting programmer. Attempting again.");
                 }
             } while (!Started && count < 3);
 
             if (count >= 3 && !Started)
             {
-                Console.WriteLine("Maximum number of attempts to start the programmer exceeded.");
+                Debug.WriteLine("Maximum number of attempts to start the programmer exceeded.");
                 throw new BadConnectionException();
             }
 
-            Console.WriteLine("Programmer being launched on phone");
+            Debug.WriteLine("Programmer being launched on phone");
         }
 
-        public async Task<bool> LoadProgrammer(string ProgrammerPath)
+        public async Task<bool> LoadProgrammer(FileStream FileStream)
         {
-            bool SendImageResult = await Task.Run(() => SendImage(ProgrammerPath));
+            bool SendImageResult = await Task.Run(() => SendImage(FileStream));
 
             if (!SendImageResult)
             {

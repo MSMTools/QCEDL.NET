@@ -8,11 +8,11 @@ namespace QCEDL.Client
         [Verb("firehose-load", HelpText = "Load firehose programmer onto the device")]
         public class FirehoseLoadOptions
         {
-            /*[Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
+            [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
             public bool Verbose
             {
                 get; set;
-            }*/
+            }
 
             [Option('f', "firehose", Required = true, HelpText = "Firehose programmer.")]
             public string Firehose
@@ -24,6 +24,12 @@ namespace QCEDL.Client
         [Verb("firehose-reset", HelpText = "Reset from a loaded firehose programmer on the device")]
         public class FirehoseResetOptions
         {
+            [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
+            public bool Verbose
+            {
+                get; set;
+            }
+
             [Option('f', "firehose", Required = true, HelpText = "Firehose programmer.")]
             public string Firehose
             {
@@ -34,6 +40,12 @@ namespace QCEDL.Client
         [Verb("firehose-readstorageinfo", HelpText = "TODO")]
         public class FirehoseReadStorageInfoOptions
         {
+            [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
+            public bool Verbose
+            {
+                get; set;
+            }
+
             [Option('s', "storage-type", Required = true, HelpText = "TODO")]
             public StorageType StorageType
             {
@@ -50,6 +62,12 @@ namespace QCEDL.Client
         [Verb("firehose-dumpstorage", HelpText = "TODO")]
         public class FirehoseDumpStorageOptions
         {
+            [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
+            public bool Verbose
+            {
+                get; set;
+            }
+
             [Option('o', "output-path", Required = true, HelpText = "TODO")]
             public string VhdxOutputPath
             {

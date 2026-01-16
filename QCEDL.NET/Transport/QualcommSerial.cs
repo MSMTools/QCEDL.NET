@@ -19,6 +19,7 @@
 // DEALINGS IN THE SOFTWARE.
 
 using MadWizard.WinUSBNet;
+using System.Diagnostics;
 using System.IO.Ports;
 
 namespace Qualcomm.EmergencyDownload.Transport
@@ -26,12 +27,14 @@ namespace Qualcomm.EmergencyDownload.Transport
     public class QualcommSerial : IDisposable
     {
         private bool Disposed = false;
-        private readonly SerialPort Port = null;
-        private readonly USBDevice USBDevice = null;
+        private readonly SerialPort? Port = null;
         private readonly CRC16 CRC16;
 
-        private readonly USBPipe InputPipe;
-        private readonly USBPipe OutputPipe;
+        private readonly bool IsQualcommPort = false;
+
+        private readonly USBDevice? USBDevice = null;
+        private readonly USBPipe? InputPipe = null;
+        private readonly USBPipe? OutputPipe = null;
 
         public bool EncodeCommands = true;
         public bool DecodeResponses = true;
@@ -41,9 +44,11 @@ namespace Qualcomm.EmergencyDownload.Transport
             CRC16 = new CRC16(0x1189, 0xFFFF, 0xFFFF);
 
             string[] DevicePathElements = DevicePath.Split(['#']);
-            if (string.Equals(DevicePathElements[3], "{86E0D1E0-8089-11D0-9CE4-08003E301F73}", StringComparison.CurrentCultureIgnoreCase))
+            IsQualcommPort = string.Equals(DevicePathElements[3], "{86E0D1E0-8089-11D0-9CE4-08003E301F73}", StringComparison.CurrentCultureIgnoreCase);
+
+            if (IsQualcommPort)
             {
-                string PortName = (string)Microsoft.Win32.Registry.GetValue($@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\USB\{DevicePathElements[1]}\{DevicePathElements[2]}\Device Parameters", "PortName", null);
+                string? PortName = (string?)Microsoft.Win32.Registry.GetValue($@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\USB\{DevicePathElements[1]}\{DevicePathElements[2]}\Device Parameters", "PortName", null);
                 if (PortName != null)
                 {
                     Port = new SerialPort(PortName, 115200)
@@ -72,64 +77,83 @@ namespace Qualcomm.EmergencyDownload.Transport
                             OutputPipe = Pipe;
                         }
                     }
-
-                    if (InputPipe == null || OutputPipe == null)
-                    {
-                        throw new Exception("Invalid USB device!");
-                    }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex);
+                    Debug.WriteLine(ex);
                 }
+            }
+
+            if ((IsQualcommPort && Port == null) || (!IsQualcommPort && (InputPipe == null || OutputPipe == null || USBDevice == null)))
+            {
+                throw new Exception("Invalid USB device!");
             }
         }
 
         public void SendData(byte[] Data)
         {
-            byte[] FormattedData = EncodeCommands ? FormatCommand(Data) : Data;
-            Port?.Write(FormattedData, 0, FormattedData.Length);
-            if (USBDevice != null)
-            {
-                OutputPipe.Write(FormattedData);
-            }
+            byte[]? FormattedData = EncodeCommands ? FormatCommand(Data) : Data;
+
+            WriteBytes(FormattedData, 0, FormattedData?.Length ?? 0);
         }
 
         public byte[] SendCommand(byte[] Command, byte[] ResponsePattern)
         {
-            byte[] FormattedCommand = EncodeCommands ? FormatCommand(Command) : Command;
-            Port?.Write(FormattedCommand, 0, FormattedCommand.Length);
-            if (USBDevice != null)
-            {
-                OutputPipe.Write(FormattedCommand);
-            }
+            byte[]? FormattedCommand = EncodeCommands ? FormatCommand(Command) : Command;
+
+            WriteBytes(FormattedCommand, 0, FormattedCommand?.Length ?? 0);
 
             return GetResponse(ResponsePattern);
         }
 
-        internal byte[] GetResponse(byte[] ResponsePattern, int Length = 0x2000)
+        private void WriteBytes(byte[]? buffer, int offset, int length)
+        {
+            if (IsQualcommPort)
+            {
+                Port!.Write(buffer, offset, length);
+            }
+            else
+            {
+                OutputPipe!.Write(buffer, offset, length);
+            }
+        }
+
+        private int ReadBytes(byte[] buffer, int offset, int length)
+        {
+            if (IsQualcommPort)
+            {
+                return Port!.Read(buffer, offset, length);
+            }
+            else
+            {
+                return InputPipe!.Read(buffer, offset, length);
+            }
+        }
+
+        private void FlushPort()
+        {
+            if (IsQualcommPort)
+            {
+                Port!.DiscardInBuffer();
+            }
+            else
+            {
+                InputPipe!.Flush();
+            }
+        }
+
+        internal byte[] GetResponse(byte[]? ResponsePattern, int Length = 0x2000)
         {
             byte[] ResponseBuffer = new byte[Length];
             Length = 0;
-            bool IsIncomplete = false;
-
+            bool IsIncomplete;
             do
             {
                 IsIncomplete = false;
 
                 try
                 {
-                    int BytesRead = 0;
-
-                    if (Port != null)
-                    {
-                        BytesRead = Port.Read(ResponseBuffer, Length, ResponseBuffer.Length - Length);
-                    }
-
-                    if (USBDevice != null)
-                    {
-                        BytesRead = InputPipe.Read(ResponseBuffer);
-                    }
+                    int BytesRead = ReadBytes(ResponseBuffer, Length, ResponseBuffer.Length - Length);
 
                     if (BytesRead == 0)
                     {
@@ -171,21 +195,17 @@ namespace Qualcomm.EmergencyDownload.Transport
                 }
                 catch (Exception ex) // Will be rethrown as BadConnectionException
                 {
-                    Console.WriteLine(ex);
+                    Debug.WriteLine(ex);
                 }
             }
             while (IsIncomplete);
 
-            Port?.DiscardInBuffer();
-            if (USBDevice != null)
-            {
-                InputPipe.Flush();
-            }
+            FlushPort();
 
             throw new BadConnectionException();
         }
 
-        private byte[] FormatCommand(byte[] Command)
+        private byte[]? FormatCommand(byte[] Command)
         {
             if (Command == null || Command.Length == 0)
             {
@@ -305,8 +325,14 @@ namespace Qualcomm.EmergencyDownload.Transport
 
         public void Close()
         {
-            Port?.Close();
-            USBDevice?.Dispose();
+            if (IsQualcommPort)
+            {
+                Port!.Close();
+            }
+            else
+            {
+                USBDevice!.Dispose();
+            }
         }
 
         protected virtual void Dispose(bool disposing)
@@ -329,15 +355,14 @@ namespace Qualcomm.EmergencyDownload.Transport
 
         internal void SetTimeOut(int v)
         {
-            if (USBDevice != null)
+            if (IsQualcommPort)
             {
-                USBDevice.ControlPipeTimeout = v;
+                Port!.ReadTimeout = v;
+                Port!.WriteTimeout = v;
             }
-
-            if (Port != null)
+            else
             {
-                Port.ReadTimeout = v;
-                Port.WriteTimeout = v;
+                USBDevice!.ControlPipeTimeout = v;
             }
         }
     }
