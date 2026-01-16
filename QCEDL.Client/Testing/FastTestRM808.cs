@@ -14,10 +14,7 @@ namespace QCEDL.Client.Testing
 
             if (Download.IsAlive())
             {
-                int Attempt = 1;
                 bool Result = false;
-
-                Console.WriteLine("Attempt " + Attempt.ToString());
 
                 try
                 {
@@ -30,8 +27,6 @@ namespace QCEDL.Client.Testing
                     Console.WriteLine("Loader sent successfully");
                 }
                 catch { }
-
-                Attempt++;
 
                 Serial.Close();
 
@@ -50,12 +45,13 @@ namespace QCEDL.Client.Testing
 
             // TODO: Implement wait for arrival of different FAST USB Interface right here
 
-        flash:
             Console.WriteLine("Device Arrived");
 
             // Flash bootloader
-            QualcommSerial Serial2 = new(DevicePath);
-            Serial2.EncodeCommands = true;
+            QualcommSerial Serial2 = new(DevicePath)
+            {
+                EncodeCommands = true
+            };
 
             Console.WriteLine("Flasher");
 

@@ -9,27 +9,27 @@ namespace QCEDL.Client.USB
 
         public void FindEDLDevices()
         {
-            foreach ((string, string) deviceInfo in USBExtensions.GetDeviceInfos(COMPortGuid))
+            foreach ((string?, string?) deviceInfo in USBExtensions.GetDeviceInfos(COMPortGuid))
             {
                 GetEmergencyPathType(COMPortGuid, deviceInfo);
             }
 
-            foreach ((string, string) deviceInfo in USBExtensions.GetDeviceInfos(WinUSBGuid))
+            foreach ((string?, string?) deviceInfo in USBExtensions.GetDeviceInfos(WinUSBGuid))
             {
                 GetEmergencyPathType(WinUSBGuid, deviceInfo);
             }
         }
 
-        public void GetEmergencyPathType(Guid Guid, (string, string) deviceInfo)
+        public void GetEmergencyPathType(Guid Guid, (string?, string?) deviceInfo)
         {
-            string DevicePath = deviceInfo.Item1;
-            string BusName = deviceInfo.Item2;
+            string? DevicePath = deviceInfo.Item1;
+            string? BusName = deviceInfo.Item2;
 
-            if (DevicePath.Contains("VID_05C6&", StringComparison.OrdinalIgnoreCase)) // Qualcomm device
+            if (DevicePath!.Contains("VID_05C6&", StringComparison.OrdinalIgnoreCase)) // Qualcomm device
             {
                 if (DevicePath.Contains("&PID_9008", StringComparison.OrdinalIgnoreCase))
                 {
-                    if ((BusName == "QHSUSB_DLOAD") || (BusName == "QHSUSB__BULK") || (BusName.StartsWith("QUSB_BULK")))
+                    if ((BusName == "QHSUSB_DLOAD") || (BusName == "QHSUSB__BULK") || (BusName!.StartsWith("QUSB_BULK")))
                     {
                         Console.WriteLine($"Found device on interface: {Guid}");
                         Console.WriteLine($"Device path: {DevicePath}");

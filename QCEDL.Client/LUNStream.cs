@@ -96,9 +96,12 @@ namespace QCEDL.Client
             // The last block we have to read (excluding)
             long endBlockIndex = noOverflowBlockEndByteCount / blockSize;
 
-            byte[] blocksOnDevice = Firehose.Read(storageType, (uint)physicalPartitionNumber, (uint)blockSize, (uint)startBlockIndex, (uint)endBlockIndex - 1, Verbose);
+            byte[]? blocksOnDevice = Firehose.Read(storageType, (uint)physicalPartitionNumber, (uint)blockSize, (uint)startBlockIndex, (uint)endBlockIndex - 1, Verbose);
 
-            Array.Copy(blocksOnDevice, overflowBlockStartByteCount, buffer, offset, readBytes);
+            if (blocksOnDevice != null)
+            {
+                Array.Copy(blocksOnDevice, overflowBlockStartByteCount, buffer, offset, readBytes);
+            }
 
             // Go through every block one by one
             /*for (long currentBlock = startBlockIndex; currentBlock < endBlockIndex; currentBlock++)

@@ -48,15 +48,15 @@ namespace QCEDL.NET.PartitionTable
             return str;
         }
 
-        public static GPT ReadFromStream(Stream stream, int sectorSize)
+        public static GPT? ReadFromStream(Stream stream, int sectorSize)
         {
             byte[] array = new byte[sectorSize];
-            stream.Read(array, 0, array.Length);
+            stream.ReadExactly(array);
             GPTHeader gptheader = StructureFromBytes<GPTHeader>(array);
 
             if (new string(gptheader.Signature) != "EFI PART")
             {
-                stream.Read(array, 0, array.Length);
+                stream.ReadExactly(array);
                 gptheader = StructureFromBytes<GPTHeader>(array);
             }
 
@@ -84,7 +84,7 @@ namespace QCEDL.NET.PartitionTable
                 while (num < gptheader.PartitionEntryCount)
                 {
                     int num2 = sectorSize / (int)gptheader.PartitionEntrySize;
-                    stream.Read(array, 0, array.Length);
+                    stream.ReadExactly(array);
 
                     for (int i = 0; i < num2; i++)
                     {

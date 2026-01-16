@@ -4,14 +4,14 @@ namespace Qualcomm.EmergencyDownload.Programmer
 {
     internal class ProgrammerConverter
     {
-        internal static byte[] ParseAsHexFile(string FilePath)
+        internal static byte[]? ParseAsHexFile(string FilePath)
         {
-            byte[] Result = null;
+            byte[]? Result = null;
 
             try
             {
                 string[] Lines = File.ReadAllLines(FilePath);
-                byte[] Buffer = null;
+                byte[]? Buffer = null;
                 int BufferSize = 0;
 
                 foreach (string Line in Lines)
@@ -33,10 +33,7 @@ namespace Qualcomm.EmergencyDownload.Programmer
                         throw new BadImageFormatException();
                     }
 
-                    if (Buffer == null)
-                    {
-                        Buffer = new byte[0x40000];
-                    }
+                    Buffer ??= new byte[0x40000];
 
                     if (LineBytes[3] == 0) // This is mem data
                     {
@@ -45,8 +42,11 @@ namespace Qualcomm.EmergencyDownload.Programmer
                     }
                 }
 
-                Result = new byte[BufferSize];
-                System.Buffer.BlockCopy(Buffer, 0, Result, 0, BufferSize);
+                if (BufferSize != 0)
+                {
+                    Result = new byte[BufferSize];
+                    System.Buffer.BlockCopy(Buffer!, 0, Result, 0, BufferSize);
+                }
             }
             catch (Exception ex)
             {

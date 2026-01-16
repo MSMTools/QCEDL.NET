@@ -33,9 +33,9 @@ namespace QCEDL.NET.USB
 {
     public class USBExtensions
     {
-        public static (string, string)[] GetDeviceInfos(Guid guid)
+        public static (string?, string?)[] GetDeviceInfos(Guid guid)
         {
-            List<(string, string)> deviceInfos = [];
+            List<(string?, string?)> deviceInfos = [];
 
             nint deviceInfoSet = nint.Zero;
             try
@@ -123,11 +123,11 @@ namespace QCEDL.NET.USB
                         // Skip over cbsize (4 bytes) to get the address of the devicePathName.
 
                         nint pDevicePathName = new(detailDataBuffer.ToInt64() + 4);
-                        string pathName = Marshal.PtrToStringUni(pDevicePathName);
+                        string? pathName = Marshal.PtrToStringUni(pDevicePathName);
 
                         // Get the String containing the devicePathName.
 
-                        string BusName = GetBusName(pathName, deviceInfoSet, da);
+                        string BusName = GetBusName(deviceInfoSet, da);
 
                         deviceInfos.Add((pathName, BusName));
                     }
@@ -153,7 +153,7 @@ namespace QCEDL.NET.USB
             return [.. deviceInfos];
         }
 
-        private static string GetBusName(string devicePath, nint deviceInfoSet, SP_DEVINFO_DATA deviceInfoData)
+        private static string GetBusName(nint deviceInfoSet, SP_DEVINFO_DATA deviceInfoData)
         {
             string BusName = "";
 
@@ -222,15 +222,10 @@ namespace QCEDL.NET.USB
 
         // Device Property
         [StructLayout(LayoutKind.Sequential)]
-        private unsafe struct DEVPROPKEY
+        private unsafe struct DEVPROPKEY(Guid ifmtid, uint ipid)
         {
-            public DEVPROPKEY(Guid ifmtid, uint ipid)
-            {
-                fmtid = ifmtid;
-                pid = ipid;
-            }
-            public Guid fmtid;
-            public uint pid;
+            public Guid fmtid = ifmtid;
+            public uint pid = ipid;
         }
 
         [DllImport("setupapi.dll", SetLastError = true, CharSet = CharSet.Unicode)]
@@ -249,6 +244,6 @@ namespace QCEDL.NET.USB
         private static extern nint SetupDiGetClassDevs(ref Guid ClassGuid, nint Enumerator, nint hwndParent, int Flags);
 
         [DllImport("setupapi.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern unsafe bool SetupDiGetDeviceProperty(nint deviceInfoSet, ref SP_DEVINFO_DATA DeviceInfoData, ref DEVPROPKEY propertyKey, out uint propertyType, byte[] propertyBuffer, int propertyBufferSize, out int requiredSize, uint flags);
+        private static extern unsafe bool SetupDiGetDeviceProperty(nint deviceInfoSet, ref SP_DEVINFO_DATA DeviceInfoData, ref DEVPROPKEY propertyKey, out uint propertyType, byte[]? propertyBuffer, int propertyBufferSize, out int requiredSize, uint flags);
     }
 }

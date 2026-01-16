@@ -55,7 +55,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose.Xml
 
             try
             {
-                DataArray data = xmlSerializer.Deserialize(reader) as DataArray;
+                DataArray data = (xmlSerializer.Deserialize(reader) as DataArray)!;
                 return data.Data;
             }
             catch

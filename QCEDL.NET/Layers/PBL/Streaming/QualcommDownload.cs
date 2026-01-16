@@ -22,14 +22,9 @@ using Qualcomm.EmergencyDownload.Transport;
 
 namespace Qualcomm.EmergencyDownload.Layers.PBL.Streaming
 {
-    public class QualcommDownload
+    public class QualcommDownload(QualcommSerial Serial)
     {
-        private readonly QualcommSerial Serial;
-
-        public QualcommDownload(QualcommSerial Serial)
-        {
-            this.Serial = Serial;
-        }
+        private readonly QualcommSerial Serial = Serial;
 
         public bool IsAlive()
         {

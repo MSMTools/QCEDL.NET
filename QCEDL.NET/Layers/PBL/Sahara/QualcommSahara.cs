@@ -37,7 +37,7 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
             this.Serial = Serial;
         }
 
-        internal static byte[] BuildCommandPacket(QualcommSaharaCommand SaharaCommand, byte[] CommandBuffer = null)
+        internal static byte[] BuildCommandPacket(QualcommSaharaCommand SaharaCommand, byte[]? CommandBuffer = null)
         {
             uint CommandID = (uint)SaharaCommand;
             uint CommandBufferLength = 0;
@@ -86,7 +86,7 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
 
         private void SendData64Bit(FileStream FileStream, byte[] ReadDataRequest)
         {
-            ulong ImageID = ByteOperations.ReadUInt64(ReadDataRequest, 0x08);
+            //ulong ImageID = ByteOperations.ReadUInt64(ReadDataRequest, 0x08);
             ulong Offset = ByteOperations.ReadUInt64(ReadDataRequest, 0x10);
             ulong Length = ByteOperations.ReadUInt64(ReadDataRequest, 0x18);
 
@@ -97,14 +97,14 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
                 FileStream.Seek((uint)Offset, SeekOrigin.Begin);
             }
 
-            FileStream.Read(ImageBuffer, 0, (int)Length);
+            FileStream.ReadExactly(ImageBuffer, 0, (int)Length);
 
             Serial.SendData(ImageBuffer);
         }
 
         private void SendData(FileStream FileStream, byte[] ReadDataRequest)
         {
-            uint ImageID = ByteOperations.ReadUInt32(ReadDataRequest, 0x08);
+            //uint ImageID = ByteOperations.ReadUInt32(ReadDataRequest, 0x08);
             uint Offset = ByteOperations.ReadUInt32(ReadDataRequest, 0x0C);
             uint Length = ByteOperations.ReadUInt32(ReadDataRequest, 0x10);
 
@@ -115,7 +115,7 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
                 FileStream.Seek(Offset, SeekOrigin.Begin);
             }
 
-            FileStream.Read(ImageBuffer, 0, (int)Length);
+            FileStream.ReadExactly(ImageBuffer, 0, (int)Length);
 
             Serial.SendData(ImageBuffer);
         }
@@ -125,8 +125,6 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
             bool Result = true;
 
             Debug.WriteLine("Sending programmer");
-
-            byte[] ImageBuffer = null;
             try
             {
                 byte[] Hello = Serial.GetResponse([0x01, 0x00, 0x00, 0x00]);
@@ -291,7 +289,7 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara
 
             byte[] SwitchModeCommand = BuildCommandPacket(QualcommSaharaCommand.SwitchMode, SwitchMode);
 
-            byte[] ResponsePattern = null;
+            byte[]? ResponsePattern;
             switch (Mode)
             {
                 case QualcommSaharaMode.ImageTXPending:

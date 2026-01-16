@@ -19,7 +19,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 
             Firehose.Serial.SendData(Encoding.UTF8.GetBytes(Command03));
 
-            bool RawMode = false;
+            //bool RawMode = false;
             bool GotResponse = false;
 
             while (!GotResponse)
@@ -41,10 +41,10 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                     }
                     else if (data.Response != null)
                     {
-                        if (data.Response.RawMode)
+                        /*if (data.Response.RawMode)
                         {
                             RawMode = true;
-                        }
+                        }*/
 
                         GotResponse = true;
                     }
@@ -79,7 +79,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
             return ResponseBuffer;
         }
 
-        public static byte[] Read(this QualcommFirehose Firehose, StorageType storageType, uint LUNi, uint sectorSize, uint FirstSector, uint LastSector, bool Verbose)
+        public static byte[]? Read(this QualcommFirehose Firehose, StorageType storageType, uint LUNi, uint sectorSize, uint FirstSector, uint LastSector, bool Verbose)
         {
             Debug.WriteLine("READ: FirstSector: " + FirstSector + " - LastSector: " + LastSector + " - SectorSize: " + sectorSize);
             //Console.WriteLine("Read");
@@ -199,7 +199,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 
             Firehose.Serial.SendData(Encoding.UTF8.GetBytes(Command03));
 
-            bool RawMode = false;
+            //bool RawMode = false;
             bool GotResponse = false;
 
             while (!GotResponse)
@@ -221,10 +221,10 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                     }
                     else if (data.Response != null)
                     {
-                        if (data.Response.RawMode)
+                        /*if (data.Response.RawMode)
                         {
                             RawMode = true;
-                        }
+                        }*/
 
                         GotResponse = true;
                     }
@@ -262,7 +262,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 
             bool GotResponse = false;
 
-            string storageInfoJson = null;
+            string? storageInfoJson = null;
 
             while (!GotResponse)
             {

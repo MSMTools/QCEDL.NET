@@ -16,15 +16,15 @@ namespace QCEDL.Client
 {
     internal class FirehoseTasks
     {
-        private static byte[] ReadGPTBuffer(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition, bool Verbose)
+        private static byte[]? ReadGPTBuffer(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition, bool Verbose)
         {
             // Read 6 sectors
             return Firehose.Read(storageType, physicalPartition, sectorSize, 0, 5, Verbose);
         }
 
-        private static GPT ReadGPT(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition, bool Verbose)
+        private static GPT? ReadGPT(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition, bool Verbose)
         {
-            byte[] GPTLUN = ReadGPTBuffer(Firehose, sectorSize, storageType, physicalPartition, Verbose);
+            byte[]? GPTLUN = ReadGPTBuffer(Firehose, sectorSize, storageType, physicalPartition, Verbose);
 
             if (GPTLUN == null)
             {
@@ -65,7 +65,7 @@ namespace QCEDL.Client
                 Logging.Log($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
                 Logging.Log();
 
-                GPT GPT = null;
+                GPT? GPT = null;
 
                 try
                 {
@@ -91,7 +91,7 @@ namespace QCEDL.Client
         {
             foreach (GPTPartition partition in GPT.Partitions)
             {
-                Logging.Log($"Name: {Encoding.ASCII.GetString([.. partition.Name.Select(x => (byte)x)])}, Type: {partition.TypeGUID}, ID: {partition.UID}, StartLBA: {partition.FirstLBA}, EndLBA: {partition.LastLBA}");
+                Logging.Log($"Name: {Encoding.ASCII.GetString([.. partition.Name.Select(x => (byte)x)])}\t, Type: {partition.TypeGUID}, ID: {partition.UID}, StartLBA: 0x{partition.FirstLBA:X16}, EndLBA: 0x{partition.LastLBA:X16}, Attributes: 0x{partition.Attributes:X16}");
             }
         }
 
@@ -177,7 +177,7 @@ namespace QCEDL.Client
 
             if (PassedHandShake && PassedRKH)
             {
-                bool RawMode = false;
+                //bool RawMode = false;
                 bool GotResponse = false;
 
                 try
@@ -201,10 +201,10 @@ namespace QCEDL.Client
                             }
                             else if (data.Response != null)
                             {
-                                if (data.Response.RawMode)
+                                /*if (data.Response.RawMode)
                                 {
                                     RawMode = true;
-                                }
+                                }*/
 
                                 GotResponse = true;
                             }

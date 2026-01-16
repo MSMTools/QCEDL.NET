@@ -97,7 +97,7 @@ namespace Qualcomm.EmergencyDownload.Transport
             WriteBytes(FormattedData, 0, FormattedData?.Length ?? 0);
         }
 
-        public byte[] SendCommand(byte[] Command, byte[] ResponsePattern)
+        public byte[] SendCommand(byte[] Command, byte[]? ResponsePattern)
         {
             byte[]? FormattedCommand = EncodeCommands ? FormatCommand(Command) : Command;
 

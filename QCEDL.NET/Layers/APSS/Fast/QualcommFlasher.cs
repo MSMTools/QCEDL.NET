@@ -92,7 +92,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Fast
             Flash(StartInBytes, Data, null, UpdaterPerSector, LengthInBytes);
         }
 
-        public void Flash(uint StartInBytes, Stream Data, Action<int, TimeSpan?> ProgressUpdateCallback, ProgressUpdater UpdaterPerSector, uint LengthInBytes = uint.MaxValue)
+        public void Flash(uint StartInBytes, Stream Data, Action<int, TimeSpan?>? ProgressUpdateCallback, ProgressUpdater? UpdaterPerSector, uint LengthInBytes = uint.MaxValue)
         {
             long Remaining = LengthInBytes == uint.MaxValue || LengthInBytes > Data.Length - Data.Position
                 ? Data.Length - Data.Position
@@ -105,7 +105,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Fast
             ResponsePattern[0] = 0x08;
             uint CurrentPosition = StartInBytes;
 
-            ProgressUpdater Progress = UpdaterPerSector;
+            ProgressUpdater? Progress = UpdaterPerSector;
             if (Progress == null && ProgressUpdateCallback != null)
             {
                 Progress = new ProgressUpdater(GetSectorCount((ulong)Remaining), ProgressUpdateCallback);
@@ -154,7 +154,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Fast
             Flash(StartInBytes, Data, null, UpdaterPerSector, OffsetInBytes, LengthInBytes);
         }
 
-        public void Flash(uint StartInBytes, byte[] Data, Action<int, TimeSpan?> ProgressUpdateCallback, ProgressUpdater UpdaterPerSector, uint OffsetInBytes = 0, uint LengthInBytes = uint.MaxValue)
+        public void Flash(uint StartInBytes, byte[] Data, Action<int, TimeSpan?>? ProgressUpdateCallback, ProgressUpdater? UpdaterPerSector, uint OffsetInBytes = 0, uint LengthInBytes = uint.MaxValue)
         {
             long RemainingBytes;
             if (OffsetInBytes > Data.Length - 1)
@@ -175,7 +175,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Fast
             ResponsePattern[0] = 0x08;
             uint CurrentPosition = StartInBytes;
 
-            ProgressUpdater Progress = UpdaterPerSector;
+            ProgressUpdater? Progress = UpdaterPerSector;
             if (Progress == null && ProgressUpdateCallback != null)
             {
                 Progress = new ProgressUpdater(GetSectorCount((ulong)RemainingBytes), ProgressUpdateCallback);
