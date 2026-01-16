@@ -44,7 +44,7 @@ namespace QCEDL.Client
 
             usbNotifier.OnQualcommEmergencyDownloadDeviceDetected += DevicePath =>
             {
-                FirehoseTasks.FirehoseReset(DevicePath, opts.Firehose, opts.Verbose).Wait();
+                FirehoseTasks.FirehoseReset(DevicePath, opts.Firehose, opts.Verbose, opts.PowerValue).Wait();
             };
 
             usbNotifier.FindEDLDevices();

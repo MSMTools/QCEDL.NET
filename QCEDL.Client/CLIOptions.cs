@@ -24,6 +24,12 @@ namespace QCEDL.Client
         [Verb("firehose-reset", HelpText = "Reset from a loaded firehose programmer on the device")]
         public class FirehoseResetOptions
         {
+            [Option('p', "power-value", Required = true, HelpText = "TODO", Default = PowerValue.Reset)]
+            public PowerValue PowerValue
+            {
+                get; set;
+            }
+
             [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
             public bool Verbose
             {

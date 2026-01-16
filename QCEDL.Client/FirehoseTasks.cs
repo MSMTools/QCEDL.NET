@@ -253,7 +253,7 @@ namespace QCEDL.Client
             }
         }
 
-        internal static async Task FirehoseReset(string DevicePath, string ProgrammerPath, bool Verbose)
+        internal static async Task FirehoseReset(string DevicePath, string ProgrammerPath, bool Verbose, PowerValue powerValue)
         {
             Logging.Log("START FirehoseReset");
 
@@ -267,7 +267,7 @@ namespace QCEDL.Client
                 }
                 else
                 {
-                    if (Firehose.Reset(Verbose))
+                    if (Firehose.Reset(Verbose, powerValue))
                     {
                         Logging.Log();
                         Logging.Log("Emergency programmer test succeeded");
