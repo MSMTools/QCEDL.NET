@@ -17,7 +17,8 @@ namespace QCEDL.Client
                CLIOptions.FirehoseReadStorageInfoOptions,
                CLIOptions.FirehoseDumpStorageOptions,
                CLIOptions.FirehoseDumpStorageLunOptions,
-               CLIOptions.FirehoseDumpStorageUIDOptions> (args)
+               CLIOptions.FirehoseDumpStorageUIDOptions,
+               CLIOptions.FirehoseDumpStorageLunNameOptions> (args)
                  .MapResult(
                    (CLIOptions.FirehoseLoadOptions opts) => RunLoadFirehoseAndReturnExitCode(opts),
                    (CLIOptions.FirehoseResetOptions opts) => RunResetFromFirehoseAndReturnExitCode(opts),
@@ -25,6 +26,7 @@ namespace QCEDL.Client
                    (CLIOptions.FirehoseDumpStorageOptions opts) => RunFirehoseDumpStorageAndReturnExitCode(opts),
                    (CLIOptions.FirehoseDumpStorageLunOptions opts) => RunFirehoseDumpStorageLunAndReturnExitCode(opts),
                    (CLIOptions.FirehoseDumpStorageUIDOptions opts) => RunFirehoseDumpStorageUidAndReturnExitCode(opts),
+                   (CLIOptions.FirehoseDumpStorageLunNameOptions opts) => RunFirehoseDumpStorageLunNameAndReturnExitCode(opts),
                    errs => 1);
         }
 
@@ -105,6 +107,20 @@ namespace QCEDL.Client
             usbNotifier.OnQualcommEmergencyDownloadDeviceDetected += DevicePath =>
             {
                 FirehoseTasks.FirehoseDumpStoragePartitionByUID(DevicePath, opts.Firehose, opts.VhdxOutputPath, opts.StorageType, opts.Verbose, opts.Uid).Wait();
+            };
+
+            usbNotifier.FindEDLDevices();
+
+            return 0;
+        }
+
+        private static int RunFirehoseDumpStorageLunNameAndReturnExitCode(CLIOptions.FirehoseDumpStorageLunNameOptions opts)
+        {
+            USBNotifier usbNotifier = new();
+
+            usbNotifier.OnQualcommEmergencyDownloadDeviceDetected += DevicePath =>
+            {
+                FirehoseTasks.FirehoseDumpStoragePartitionByNameAndLUN(DevicePath, opts.Firehose, opts.VhdxOutputPath, opts.StorageType, opts.Verbose, opts.Name, opts.Lun).Wait();
             };
 
             usbNotifier.FindEDLDevices();

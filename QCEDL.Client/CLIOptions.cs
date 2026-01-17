@@ -160,5 +160,45 @@ namespace QCEDL.Client
                 get; set;
             }
         }
+
+        [Verb("firehose-dumpstoragelunname", HelpText = "TODO")]
+        public class FirehoseDumpStorageLunNameOptions
+        {
+            [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
+            public bool Verbose
+            {
+                get; set;
+            }
+
+            [Option('o', "output-path", Required = true, HelpText = "TODO")]
+            public string VhdxOutputPath
+            {
+                get; set;
+            }
+
+            [Option('s', "storage-type", Required = true, HelpText = "TODO")]
+            public StorageType StorageType
+            {
+                get; set;
+            }
+
+            [Option('f', "firehose", Required = true, HelpText = "Firehose programmer.")]
+            public string Firehose
+            {
+                get; set;
+            }
+
+            [Option('l', "lun", Required = true, HelpText = "TODO")]
+            public int Lun
+            {
+                get; set;
+            }
+
+            [Option('n', "name", Required = true, HelpText = "TODO")]
+            public string Name
+            {
+                get; set;
+            }
+        }
     }
 }

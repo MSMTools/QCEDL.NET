@@ -2,7 +2,7 @@
   "profiles": {
     "QCEDL.Client": {
       "commandName": "Project",
-      "commandLineArgs": "firehose-dumpstorageuid -f \"C:\\Users\\Gus\\Downloads\\Telegram Desktop\\prog_firehose_lite.elf\" -s UFS -o xbl.img -u ea17298c-5ab1-1092-b9be-eeec24697cfc"
+      "commandLineArgs": "firehose-dumpstoragelunname -f \"C:\\Users\\Gus\\Downloads\\Telegram Desktop\\prog_firehose_lite.elf\" -s UFS -o TZAPPS.img -l 4 -n TZAPPS"
     }
   }
 }
