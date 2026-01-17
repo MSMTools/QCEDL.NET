@@ -16,13 +16,15 @@ namespace QCEDL.Client
                CLIOptions.FirehoseResetOptions,
                CLIOptions.FirehoseReadStorageInfoOptions,
                CLIOptions.FirehoseDumpStorageOptions,
-               CLIOptions.FirehoseDumpStorageLunOptions>(args)
+               CLIOptions.FirehoseDumpStorageLunOptions,
+               CLIOptions.FirehoseDumpStorageUIDOptions> (args)
                  .MapResult(
                    (CLIOptions.FirehoseLoadOptions opts) => RunLoadFirehoseAndReturnExitCode(opts),
                    (CLIOptions.FirehoseResetOptions opts) => RunResetFromFirehoseAndReturnExitCode(opts),
                    (CLIOptions.FirehoseReadStorageInfoOptions opts) => RunFirehoseReadStorageInfoAndReturnExitCode(opts),
                    (CLIOptions.FirehoseDumpStorageOptions opts) => RunFirehoseDumpStorageAndReturnExitCode(opts),
                    (CLIOptions.FirehoseDumpStorageLunOptions opts) => RunFirehoseDumpStorageLunAndReturnExitCode(opts),
+                   (CLIOptions.FirehoseDumpStorageUIDOptions opts) => RunFirehoseDumpStorageUidAndReturnExitCode(opts),
                    errs => 1);
         }
 
@@ -89,6 +91,20 @@ namespace QCEDL.Client
             usbNotifier.OnQualcommEmergencyDownloadDeviceDetected += DevicePath =>
             {
                 FirehoseTasks.FirehoseDumpStorageLun(DevicePath, opts.Firehose, opts.VhdxOutputPath, opts.StorageType, opts.Verbose, opts.Lun).Wait();
+            };
+
+            usbNotifier.FindEDLDevices();
+
+            return 0;
+        }
+
+        private static int RunFirehoseDumpStorageUidAndReturnExitCode(CLIOptions.FirehoseDumpStorageUIDOptions opts)
+        {
+            USBNotifier usbNotifier = new();
+
+            usbNotifier.OnQualcommEmergencyDownloadDeviceDetected += DevicePath =>
+            {
+                FirehoseTasks.FirehoseDumpStoragePartitionByUID(DevicePath, opts.Firehose, opts.VhdxOutputPath, opts.StorageType, opts.Verbose, opts.Uid).Wait();
             };
 
             usbNotifier.FindEDLDevices();

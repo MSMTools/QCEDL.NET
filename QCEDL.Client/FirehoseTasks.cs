@@ -7,7 +7,6 @@ using Qualcomm.EmergencyDownload.Layers.APSS.Firehose;
 using Qualcomm.EmergencyDownload.Layers.APSS.Firehose.Xml.Elements;
 using Qualcomm.EmergencyDownload.Layers.PBL.Sahara;
 using Qualcomm.EmergencyDownload.Transport;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using System.Xml;
@@ -360,7 +359,38 @@ namespace QCEDL.Client
                         case StorageType.UFS:
                         case StorageType.SPINOR:
                             {
-                                DumpUFSDevice(Firehose, VhdxOutputPath, storageType, Verbose);
+                                List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
+
+                                // Figure out the number of LUNs first.
+                                Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
+                                if (mainInfo != null)
+                                {
+                                    luStorageInfos.Add(mainInfo);
+
+                                    int totalLuns = mainInfo.storage_info.num_physical;
+
+                                    // Now figure out the size of each lun
+                                    for (int i = 1; i < totalLuns; i++)
+                                    {
+                                        Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
+                                        luStorageInfos.Add(luInfo);
+                                    }
+                                }
+
+                                for (int i = 0; i < luStorageInfos.Count; i++)
+                                {
+                                    Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[i];
+
+                                    Logging.Log();
+                                    Logging.Log($"LUN[{i}] Name: {storageInfo.storage_info.prod_name}");
+                                    Logging.Log($"LUN[{i}] Total Blocks: {storageInfo.storage_info.total_blocks}");
+                                    Logging.Log($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
+                                    Logging.Log();
+
+                                    LUNStream test = new(Firehose, i, storageType, Verbose);
+                                    ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{i}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose);
+                                    Logging.Log();
+                                }
                                 break;
                             }
                         default:
@@ -378,42 +408,6 @@ namespace QCEDL.Client
             {
                 Logging.Log();
                 Logging.Log("END FirehoseDumpStorage");
-            }
-        }
-
-        private static void DumpUFSDevice(QualcommFirehose Firehose, string VhdxOutputPath, StorageType storageType, bool Verbose)
-        {
-            List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
-
-            // Figure out the number of LUNs first.
-            Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
-            if (mainInfo != null)
-            {
-                luStorageInfos.Add(mainInfo);
-
-                int totalLuns = mainInfo.storage_info.num_physical;
-
-                // Now figure out the size of each lun
-                for (int i = 1; i < totalLuns; i++)
-                {
-                    Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
-                    luStorageInfos.Add(luInfo);
-                }
-            }
-
-            for (int i = 0; i < luStorageInfos.Count; i++)
-            {
-                Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[i];
-
-                Logging.Log();
-                Logging.Log($"LUN[{i}] Name: {storageInfo.storage_info.prod_name}");
-                Logging.Log($"LUN[{i}] Total Blocks: {storageInfo.storage_info.total_blocks}");
-                Logging.Log($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
-                Logging.Log();
-
-                LUNStream test = new(Firehose, i, storageType, Verbose);
-                ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{i}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose);
-                Logging.Log();
             }
         }
 
@@ -489,7 +483,41 @@ namespace QCEDL.Client
                         case StorageType.UFS:
                         case StorageType.SPINOR:
                             {
-                                DumpUFSDeviceLun(Firehose, VhdxOutputPath, storageType, Verbose, Lun);
+                                List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
+
+                                // Figure out the number of LUNs first.
+                                Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
+                                if (mainInfo != null)
+                                {
+                                    luStorageInfos.Add(mainInfo);
+
+                                    int totalLuns = mainInfo.storage_info.num_physical;
+
+                                    // Now figure out the size of each lun
+                                    for (int i = 1; i < totalLuns; i++)
+                                    {
+                                        Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
+                                        luStorageInfos.Add(luInfo);
+                                    }
+                                }
+
+                                if (luStorageInfos.Count <= Lun)
+                                {
+                                    Logging.Log("Lun not found.");
+                                    return;
+                                }
+
+                                Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[Lun];
+
+                                Logging.Log();
+                                Logging.Log($"LUN[{Lun}] Name: {storageInfo.storage_info.prod_name}");
+                                Logging.Log($"LUN[{Lun}] Total Blocks: {storageInfo.storage_info.total_blocks}");
+                                Logging.Log($"LUN[{Lun}] Block Size: {storageInfo.storage_info.block_size}");
+                                Logging.Log();
+
+                                LUNStream test = new(Firehose, Lun, storageType, Verbose);
+                                ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{Lun}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose);
+                                Logging.Log();
                                 break;
                             }
                         default:
@@ -510,44 +538,137 @@ namespace QCEDL.Client
             }
         }
 
-        private static void DumpUFSDeviceLun(QualcommFirehose Firehose, string VhdxOutputPath, StorageType storageType, bool Verbose, int Lun)
+        internal static async Task FirehoseDumpStoragePartitionByUID(string DevicePath, string ProgrammerPath, string VhdxOutputPath, StorageType storageType, bool Verbose, Guid Uid)
         {
-            List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
+            Logging.Log("START FirehoseDumpStorageLun");
 
-            // Figure out the number of LUNs first.
-            Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
-            if (mainInfo != null)
+            try
             {
-                luStorageInfos.Add(mainInfo);
+                (QualcommSerial Serial, QualcommFirehose? Firehose) = await CommonFirehoseLoad(DevicePath, ProgrammerPath, Verbose);
 
-                int totalLuns = mainInfo.storage_info.num_physical;
-
-                // Now figure out the size of each lun
-                for (int i = 1; i < totalLuns; i++)
+                if (Firehose == null)
                 {
-                    Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
-                    luStorageInfos.Add(luInfo);
+                    Logging.Log("Loading firehose failed.");
+                }
+                else
+                {
+                    Firehose.Configure(storageType, Verbose);
+
+                    switch (storageType)
+                    {
+                        case StorageType.UFS:
+                        case StorageType.SPINOR:
+                            {
+                                List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
+
+                                // Figure out the number of LUNs first.
+                                Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
+                                if (mainInfo != null)
+                                {
+                                    luStorageInfos.Add(mainInfo);
+
+                                    int totalLuns = mainInfo.storage_info.num_physical;
+
+                                    // Now figure out the size of each lun
+                                    for (int i = 1; i < totalLuns; i++)
+                                    {
+                                        Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
+                                        luStorageInfos.Add(luInfo);
+                                    }
+                                }
+
+                                bool PartitionFound = false;
+
+                                for (int i = 0; i < luStorageInfos.Count; i++)
+                                {
+                                    Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[i];
+
+                                    Logging.Log();
+                                    Logging.Log($"LUN[{i}] Name: {storageInfo.storage_info.prod_name}");
+                                    Logging.Log($"LUN[{i}] Total Blocks: {storageInfo.storage_info.total_blocks}");
+                                    Logging.Log($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
+                                    Logging.Log();
+
+                                    GPT? GPT = null;
+
+                                    try
+                                    {
+                                        GPT = ReadGPT(Firehose, (uint)storageInfo.storage_info.block_size, storageType, (uint)i, Verbose);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Logging.Log(e.ToString());
+                                    }
+
+                                    if (GPT == null)
+                                    {
+                                        Logging.Log($"LUN {i}: No GPT found");
+                                        continue;
+                                    }
+
+                                    foreach (GPTPartition partition in GPT.Partitions)
+                                    {
+                                        if (partition.UID == Uid)
+                                        {
+                                            if (File.Exists(VhdxOutputPath))
+                                            {
+                                                throw new Exception("File already exists");
+                                            }
+
+                                            FileStream fileStream = File.Create(VhdxOutputPath);
+
+                                            PartStream partStream = new(Firehose, i, storageType, Verbose, partition.FirstLBA, partition.LastLBA);
+
+                                            long diskCapacity = partStream.Length;
+                                            fileStream.SetLength(diskCapacity);
+
+
+                                            StreamPump pump = new()
+                                            {
+                                                InputStream = partStream,
+                                                OutputStream = fileStream,
+                                                SparseCopy = true,
+                                                SparseChunkSize = storageInfo.storage_info.block_size,
+                                                BufferSize = storageInfo.storage_info.block_size * 256 // Max 24 sectors at a time
+                                            };
+
+                                            long totalBytes = partStream.Length;
+
+                                            DateTime now = DateTime.Now;
+                                            pump.ProgressEvent += (o, e) => { ShowProgress((ulong)e.BytesRead, (ulong)totalBytes, now, Verbose); };
+
+                                            Logging.Log("Converting RAW to RAW");
+                                            pump.Run();
+                                            Logging.Log();
+
+                                            PartitionFound = true;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (!PartitionFound)
+                                {
+                                    Logging.Log("Partition UID not found.");
+                                }
+                                break;
+                            }
+                        default:
+                            {
+                                throw new NotImplementedException();
+                            }
+                    }
                 }
             }
-
-            if (luStorageInfos.Count <= Lun)
+            catch (Exception Ex)
             {
-                Logging.Log("Lun not found.");
-                return;
+                Logging.Log(Ex.ToString());
             }
-
-            Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[Lun];
-
-            Logging.Log();
-            Logging.Log($"LUN[{Lun}] Name: {storageInfo.storage_info.prod_name}");
-            Logging.Log($"LUN[{Lun}] Total Blocks: {storageInfo.storage_info.total_blocks}");
-            Logging.Log($"LUN[{Lun}] Block Size: {storageInfo.storage_info.block_size}");
-            Logging.Log();
-
-            LUNStream test = new(Firehose, Lun, storageType, Verbose);
-            ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{Lun}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose);
-            Logging.Log();
+            finally
+            {
+                Logging.Log();
+                Logging.Log("END FirehoseDumpStorageLun");
+            }
         }
-
     }
 }
