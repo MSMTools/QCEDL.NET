@@ -22,9 +22,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 
             payloadSize = (ulong)response.MaxPayloadSizeToTargetInBytesSupported;
 
-            response = Configure2(Firehose, storageType, Verbose, payloadSize);
-
-            return response;
+            return Configure2(Firehose, storageType, Verbose, payloadSize);
         }
 
         public static Response Configure2(this QualcommFirehose Firehose, StorageType storageType, bool Verbose, ulong maxPayloadSizeToTargetInBytes)
