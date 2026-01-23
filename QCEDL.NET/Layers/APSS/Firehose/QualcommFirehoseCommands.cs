@@ -9,20 +9,35 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 {
     public static class QualcommFirehoseCommands
     {
-        public static bool Configure(this QualcommFirehose Firehose, StorageType storageType, bool Verbose)
+        public static Response Configure(this QualcommFirehose Firehose, StorageType storageType, bool Verbose)
+        {
+            ulong payloadSize = ulong.MaxValue;
+
+            Response response = Configure2(Firehose, storageType, Verbose, payloadSize);
+
+            if (response.Value == ResponseValue.ACK)
+            {
+                return response;
+            }
+
+            payloadSize = (ulong)response.MaxPayloadSizeToTargetInBytesSupported;
+
+            response = Configure2(Firehose, storageType, Verbose, payloadSize);
+
+            return response;
+        }
+
+        public static Response Configure2(this QualcommFirehose Firehose, StorageType storageType, bool Verbose, ulong maxPayloadSizeToTargetInBytes)
         {
             Console.WriteLine("Configuring");
 
             string Command03 = QualcommFirehoseXml.BuildCommandPacket([
-                QualcommFirehoseXmlPackets.GetConfigurePacket(storageType, true, 1048576, false, 8192, true, false)
+                QualcommFirehoseXmlPackets.GetConfigurePacket(storageType, true, maxPayloadSizeToTargetInBytes, false, 8192, true, false)
             ]);
 
             Firehose.Serial.SendData(Encoding.UTF8.GetBytes(Command03));
 
-            //bool RawMode = false;
-            bool GotResponse = false;
-
-            while (!GotResponse)
+            while (true)
             {
                 Data[] datas = Firehose.GetFirehoseResponseDataPayloads();
 
@@ -41,12 +56,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                     }
                     else if (data.Response != null)
                     {
-                        /*if (data.Response.RawMode)
-                        {
-                            RawMode = true;
-                        }*/
-
-                        GotResponse = true;
+                        return data.Response;
                     }
                     else
                     {
@@ -61,27 +71,16 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                     }
                 }
             }
-
-            return true;
         }
 
-        public static byte[] GetExpectedBufferLength(this QualcommFirehose Firehose, int length)
+        public static byte[]? Read(this QualcommFirehose Firehose, StorageType storageType, uint LUNi, uint sectorSize, uint FirstSector, uint LastSector, bool Verbose, int MaxPayloadSizeToTargetInBytes)
         {
-            List<byte> bufferList = [];
-
-            do
+            if (LastSector < FirstSector)
             {
-                bufferList.AddRange(Firehose.Serial.GetResponse(null, Length: length - bufferList.Count));
-            } while (bufferList.Count < length);
+                throw new InvalidDataException();
+            }
 
-            byte[] ResponseBuffer = [.. bufferList];
-
-            return ResponseBuffer;
-        }
-
-        public static byte[]? Read(this QualcommFirehose Firehose, StorageType storageType, uint LUNi, uint sectorSize, uint FirstSector, uint LastSector, bool Verbose)
-        {
-            Debug.WriteLine("READ: FirstSector: " + FirstSector + " - LastSector: " + LastSector + " - SectorSize: " + sectorSize);
+            Debug.WriteLine($"READ: FirstSector: {FirstSector} - LastSector: {LastSector} - SectorSize: {sectorSize}");
             //Console.WriteLine("Read");
 
             string Command03 = QualcommFirehoseXml.BuildCommandPacket([
@@ -139,9 +138,57 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                 return null;
             }
 
-            int totalReadLength = (int)(LastSector - FirstSector + 1) * 4096;
+            /*byte[] readBuffer;
 
-            byte[] readBuffer = Firehose.GetExpectedBufferLength(totalReadLength);
+            {
+                ulong startSector = FirstSector;
+                ulong sectorsRemaining = LastSector - FirstSector + 1;
+                ulong readBufferSize = sectorsRemaining * sectorSize;
+
+                if (readBufferSize > (ulong)MaxPayloadSizeToTargetInBytes)
+                {
+                    readBufferSize = ((ulong)MaxPayloadSizeToTargetInBytes / sectorSize) * sectorSize;
+                }
+
+                ulong bytesRead = 0;
+
+                using MemoryStream memoryStream = new((int)((LastSector - FirstSector + 1) * sectorSize));
+
+                while (sectorsRemaining != 0)
+                {
+                    ulong sectorCount = readBufferSize / sectorSize;
+
+                    byte[] readData = Firehose.Serial.GetResponse(null, Length: (uint)readBufferSize);
+                    memoryStream.Write(readData);
+
+                    readBufferSize = (ulong)readData.Length;
+                    sectorCount = readBufferSize / sectorSize;
+
+                    bytesRead += readBufferSize;
+
+                    startSector += sectorCount;
+                    sectorsRemaining -= sectorCount;
+                    readBufferSize = sectorsRemaining * sectorSize;
+
+                    if (readBufferSize > (ulong)MaxPayloadSizeToTargetInBytes)
+                    {
+                        readBufferSize = ((ulong)MaxPayloadSizeToTargetInBytes / sectorSize) * sectorSize;
+                    }
+                }
+
+                readBuffer = memoryStream.ToArray();
+            }*/
+
+            uint totalReadLength = (LastSector - FirstSector + 1) * sectorSize;
+
+            List<byte> bufferList = [];
+
+            do
+            {
+                bufferList.AddRange(Firehose.Serial.GetResponse(null, Length: (uint)(totalReadLength - bufferList.Count)));
+            } while (bufferList.Count < totalReadLength);
+
+            byte[] readBuffer = [.. bufferList];
 
             RawMode = false;
             GotResponse = false;

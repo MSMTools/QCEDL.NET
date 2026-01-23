@@ -13,15 +13,15 @@ namespace QCEDL.Client
 {
     internal partial class FirehoseTasks
     {
-        private static byte[]? ReadGPTBuffer(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition, bool Verbose)
+        private static byte[]? ReadGPTBuffer(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition, bool Verbose, int MaxPayloadSizeToTargetInBytes)
         {
             // Read 6 sectors
-            return Firehose.Read(storageType, physicalPartition, sectorSize, 0, 5, Verbose);
+            return Firehose.Read(storageType, physicalPartition, sectorSize, 0, 5, Verbose, MaxPayloadSizeToTargetInBytes);
         }
 
-        private static GPT? ReadGPT(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition, bool Verbose)
+        private static GPT? ReadGPT(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition, bool Verbose, int MaxPayloadSizeToTargetInBytes)
         {
-            byte[]? GPTLUN = ReadGPTBuffer(Firehose, sectorSize, storageType, physicalPartition, Verbose);
+            byte[]? GPTLUN = ReadGPTBuffer(Firehose, sectorSize, storageType, physicalPartition, Verbose, MaxPayloadSizeToTargetInBytes);
 
             if (GPTLUN == null)
             {
@@ -32,7 +32,7 @@ namespace QCEDL.Client
             return GPT.ReadFromStream(stream, (int)sectorSize);
         }
 
-        private static void ReadGPTs(QualcommFirehose Firehose, StorageType storageType, bool Verbose)
+        private static void ReadGPTs(QualcommFirehose Firehose, StorageType storageType, bool Verbose, int MaxPayloadSizeToTargetInBytes)
         {
             List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
 
@@ -66,7 +66,7 @@ namespace QCEDL.Client
 
                 try
                 {
-                    GPT = ReadGPT(Firehose, (uint)storageInfo.storage_info.block_size, storageType, (uint)i, Verbose);
+                    GPT = ReadGPT(Firehose, (uint)storageInfo.storage_info.block_size, storageType, (uint)i, Verbose, MaxPayloadSizeToTargetInBytes);
                 }
                 catch (Exception e)
                 {
@@ -319,9 +319,9 @@ namespace QCEDL.Client
                 }
                 else
                 {
-                    Firehose.Configure(storageType, Verbose);
+                    ConfigureResponse response = Firehose.Configure(storageType, Verbose);
 
-                    ReadGPTs(Firehose, storageType, Verbose);
+                    ReadGPTs(Firehose, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes);
                 }
             }
             catch (Exception Ex)

@@ -24,7 +24,7 @@ namespace QCEDL.Client
                 }
                 else
                 {
-                    Firehose.Configure(storageType, Verbose);
+                    ConfigureResponse response = Firehose.Configure(storageType, Verbose);
 
                     switch (storageType)
                     {
@@ -59,7 +59,7 @@ namespace QCEDL.Client
                                     Logging.Log($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
                                     Logging.Log();
 
-                                    LUNStream test = new(Firehose, i, storageType, Verbose);
+                                    LUNStream test = new(Firehose, i, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes, storageInfo);
                                     ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{i}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose);
                                     Logging.Log();
                                 }
@@ -97,7 +97,7 @@ namespace QCEDL.Client
                 }
                 else
                 {
-                    Firehose.Configure(storageType, Verbose);
+                    ConfigureResponse response = Firehose.Configure(storageType, Verbose);
 
                     switch (storageType)
                     {
@@ -136,7 +136,7 @@ namespace QCEDL.Client
                                 Logging.Log($"LUN[{Lun}] Block Size: {storageInfo.storage_info.block_size}");
                                 Logging.Log();
 
-                                LUNStream test = new(Firehose, Lun, storageType, Verbose);
+                                LUNStream test = new(Firehose, Lun, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes, storageInfo);
                                 ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{Lun}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose);
                                 Logging.Log();
                                 break;
@@ -173,7 +173,7 @@ namespace QCEDL.Client
                 }
                 else
                 {
-                    Firehose.Configure(storageType, Verbose);
+                    ConfigureResponse response = Firehose.Configure(storageType, Verbose);
 
                     switch (storageType)
                     {
@@ -214,7 +214,7 @@ namespace QCEDL.Client
 
                                     try
                                     {
-                                        GPT = ReadGPT(Firehose, (uint)storageInfo.storage_info.block_size, storageType, (uint)i, Verbose);
+                                        GPT = ReadGPT(Firehose, (uint)storageInfo.storage_info.block_size, storageType, (uint)i, Verbose, response.MaxPayloadSizeToTargetInBytes);
                                     }
                                     catch (Exception e)
                                     {
@@ -238,7 +238,7 @@ namespace QCEDL.Client
 
                                             FileStream fileStream = File.Create(VhdxOutputPath);
 
-                                            PartStream partStream = new(Firehose, i, storageType, Verbose, partition.FirstLBA, partition.LastLBA);
+                                            PartStream partStream = new(Firehose, i, storageType, Verbose, partition.FirstLBA, partition.LastLBA, response.MaxPayloadSizeToTargetInBytes, storageInfo);
 
                                             long diskCapacity = partStream.Length;
                                             fileStream.SetLength(diskCapacity);
@@ -311,7 +311,7 @@ namespace QCEDL.Client
                 }
                 else
                 {
-                    Firehose.Configure(storageType, Verbose);
+                    ConfigureResponse response = Firehose.Configure(storageType, Verbose);
 
                     switch (storageType)
                     {
@@ -356,7 +356,7 @@ namespace QCEDL.Client
 
                                 try
                                 {
-                                    GPT = ReadGPT(Firehose, (uint)storageInfo.storage_info.block_size, storageType, (uint)Lun, Verbose);
+                                    GPT = ReadGPT(Firehose, (uint)storageInfo.storage_info.block_size, storageType, (uint)Lun, Verbose, response.MaxPayloadSizeToTargetInBytes);
                                 }
                                 catch (Exception e)
                                 {
@@ -380,7 +380,7 @@ namespace QCEDL.Client
 
                                         FileStream fileStream = File.Create(VhdxOutputPath);
 
-                                        PartStream partStream = new(Firehose, Lun, storageType, Verbose, partition.FirstLBA, partition.LastLBA);
+                                        PartStream partStream = new(Firehose, Lun, storageType, Verbose, partition.FirstLBA, partition.LastLBA, response.MaxPayloadSizeToTargetInBytes, storageInfo);
 
                                         long diskCapacity = partStream.Length;
                                         fileStream.SetLength(diskCapacity);
@@ -392,7 +392,7 @@ namespace QCEDL.Client
                                             OutputStream = fileStream,
                                             SparseCopy = true,
                                             SparseChunkSize = storageInfo.storage_info.block_size,
-                                            BufferSize = storageInfo.storage_info.block_size * 256 // Max 24 sectors at a time
+                                            BufferSize = response.MaxPayloadSizeToTargetInBytes//storageInfo.storage_info.block_size * 256 // Max 24 sectors at a time
                                         };
 
                                         long totalBytes = partStream.Length;

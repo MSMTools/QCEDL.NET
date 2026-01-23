@@ -65,6 +65,8 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 
             string Incoming = Encoding.UTF8.GetString(ResponseBuffer);
 
+            //Console.WriteLine(Incoming);
+
             try
             {
                 Data[] datas = QualcommFirehoseXml.GetDataPayloads(Incoming);

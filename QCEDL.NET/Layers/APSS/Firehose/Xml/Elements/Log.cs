@@ -15,5 +15,10 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose.Xml.Elements
         {
             return Value != null;
         }
+
+        public override string ToString()
+        {
+            return Value;
+        }
     }
 }

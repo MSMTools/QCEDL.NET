@@ -35,7 +35,7 @@ namespace Qualcomm.EmergencyDownload.Layers.PBL.Sahara.Command
 
             Serial.SendData(BuildExecuteDataPacket((uint)command));
 
-            return Serial.GetResponse(null, Length: (int)DataLength);
+            return Serial.GetResponse(null, Length: DataLength);
         }
 
 

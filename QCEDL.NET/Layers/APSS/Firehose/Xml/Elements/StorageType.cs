@@ -2,7 +2,7 @@
 
 namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose.Xml.Elements
 {
-    public enum  StorageType
+    public enum StorageType
     {
         [XmlEnum(Name = "eMMC")]
         SDCC,

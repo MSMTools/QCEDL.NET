@@ -35,6 +35,12 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose.Xml.Elements
             get; set;
         }
 
+        [XmlElement(ElementName = "program")]
+        public Program? Program
+        {
+            get; set;
+        }
+
         [XmlElement(ElementName = "configure")]
         public Configure? Configure
         {

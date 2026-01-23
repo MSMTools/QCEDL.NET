@@ -118,15 +118,15 @@ namespace Qualcomm.EmergencyDownload.Transport
             }
         }
 
-        private int ReadBytes(byte[] buffer, int offset, int length)
+        private uint ReadBytes(byte[] buffer, int offset, uint length)
         {
             if (IsQualcommPort)
             {
-                return Port!.Read(buffer, offset, length);
+                return (uint)Port!.Read(buffer, offset, (int)length);
             }
             else
             {
-                return InputPipe!.Read(buffer, offset, length);
+                return (uint)InputPipe!.Read(buffer, offset, (int)length);
             }
         }
 
@@ -142,7 +142,7 @@ namespace Qualcomm.EmergencyDownload.Transport
             }
         }
 
-        internal byte[] GetResponse(byte[]? ResponsePattern, int Length = 0x2000)
+        internal byte[] GetResponse(byte[]? ResponsePattern, uint Length = 0x2000)
         {
             byte[] ResponseBuffer = new byte[Length];
             Length = 0;
@@ -153,7 +153,7 @@ namespace Qualcomm.EmergencyDownload.Transport
 
                 try
                 {
-                    int BytesRead = ReadBytes(ResponseBuffer, Length, ResponseBuffer.Length - Length);
+                    uint BytesRead = ReadBytes(ResponseBuffer, (int)Length, (uint)ResponseBuffer.Length - Length);
 
                     if (BytesRead == 0)
                     {
@@ -165,12 +165,12 @@ namespace Qualcomm.EmergencyDownload.Transport
                     byte[] DecodedResponse;
                     if (DecodeResponses)
                     {
-                        DecodedResponse = DecodeResponse(ResponseBuffer, (uint)Length);
+                        DecodedResponse = DecodeResponse(ResponseBuffer, Length);
                     }
                     else
                     {
                         DecodedResponse = new byte[Length];
-                        Buffer.BlockCopy(ResponseBuffer, 0, DecodedResponse, 0, Length);
+                        Buffer.BlockCopy(ResponseBuffer, 0, DecodedResponse, 0, (int)Length);
                     }
 
                     if (ResponsePattern != null)
