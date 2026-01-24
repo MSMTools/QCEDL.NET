@@ -23,7 +23,7 @@ namespace QCEDL.Client
 
         public PartStream(QualcommFirehose Firehose, int physicalPartitionNumber, StorageType storageType, bool Verbose, ulong firstSector, ulong lastSector, int MaxPayloadSizeToTargetInBytes, Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root luInfo)
         {
-            sectorBasedReader = new EDLSectorReader(Firehose, physicalPartitionNumber, storageType, Verbose, MaxPayloadSizeToTargetInBytes);
+            sectorBasedReader = new EDLSectorReader(Firehose, physicalPartitionNumber, storageType, Verbose, MaxPayloadSizeToTargetInBytes, luInfo);
             currentPosition = 0;
 
             this.firstSector = firstSector;
