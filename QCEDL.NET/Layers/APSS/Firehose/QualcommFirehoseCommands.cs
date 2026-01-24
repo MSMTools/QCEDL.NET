@@ -136,59 +136,37 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                 return null;
             }
 
-            /*byte[] readBuffer;
+            byte[] readBuffer;
 
             {
-                ulong startSector = FirstSector;
                 ulong sectorsRemaining = LastSector - FirstSector + 1;
                 ulong readBufferSize = sectorsRemaining * sectorSize;
-
-                if (readBufferSize > (ulong)MaxPayloadSizeToTargetInBytes)
-                {
-                    readBufferSize = ((ulong)MaxPayloadSizeToTargetInBytes / sectorSize) * sectorSize;
-                }
-
-                ulong bytesRead = 0;
 
                 using MemoryStream memoryStream = new((int)((LastSector - FirstSector + 1) * sectorSize));
 
                 while (sectorsRemaining != 0)
                 {
-                    ulong sectorCount = readBufferSize / sectorSize;
-
-                    byte[] readData = Firehose.Serial.GetResponse(null, Length: (uint)readBufferSize);
-                    memoryStream.Write(readData);
-
-                    readBufferSize = (ulong)readData.Length;
-                    sectorCount = readBufferSize / sectorSize;
-
-                    bytesRead += readBufferSize;
-
-                    startSector += sectorCount;
-                    sectorsRemaining -= sectorCount;
-                    readBufferSize = sectorsRemaining * sectorSize;
-
                     if (readBufferSize > (ulong)MaxPayloadSizeToTargetInBytes)
                     {
                         readBufferSize = ((ulong)MaxPayloadSizeToTargetInBytes / sectorSize) * sectorSize;
                     }
+
+                    ulong readCount = 0;
+                    while (readCount != readBufferSize)
+                    {
+                        byte[] readData = Firehose.Serial.GetResponse(null, Length: (uint)(readBufferSize - readCount));
+                        memoryStream.Write(readData);
+                        readCount += (ulong)readData.LongLength;
+                    }
+
+                    ulong sectorCount = readBufferSize / sectorSize;
+                    sectorsRemaining -= sectorCount;
+                    readBufferSize = sectorsRemaining * sectorSize;
                 }
 
                 readBuffer = memoryStream.ToArray();
-            }*/
+            }
 
-            uint totalReadLength = (LastSector - FirstSector + 1) * sectorSize;
-
-            List<byte> bufferList = [];
-
-            do
-            {
-                bufferList.AddRange(Firehose.Serial.GetResponse(null, Length: (uint)(totalReadLength - bufferList.Count)));
-            } while (bufferList.Count < totalReadLength);
-
-            byte[] readBuffer = [.. bufferList];
-
-            RawMode = false;
             GotResponse = false;
 
             while (!GotResponse)
@@ -210,11 +188,6 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                     }
                     else if (data.Response != null)
                     {
-                        if (data.Response.RawMode)
-                        {
-                            RawMode = true;
-                        }
-
                         GotResponse = true;
                     }
                     else
