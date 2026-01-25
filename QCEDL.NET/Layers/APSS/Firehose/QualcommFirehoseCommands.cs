@@ -78,6 +78,24 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                 throw new InvalidDataException();
             }
 
+            using MemoryStream memoryStream = new((int)((LastSector - FirstSector + 1) * sectorSize));
+
+            bool result = Read(Firehose, storageType, LUNi, sectorSize, FirstSector, LastSector, Verbose, MaxPayloadSizeToTargetInBytes, memoryStream);
+            if (!result)
+            {
+                return null;
+            }
+
+            return memoryStream.ToArray();
+        }
+
+        public static bool Read(this QualcommFirehose Firehose, StorageType storageType, uint LUNi, uint sectorSize, uint FirstSector, uint LastSector, bool Verbose, int MaxPayloadSizeToTargetInBytes, Stream outputStream)
+        {
+            if (LastSector < FirstSector)
+            {
+                throw new InvalidDataException();
+            }
+
             Debug.WriteLine($"READ: FirstSector: {FirstSector} - LastSector: {LastSector} - SectorSize: {sectorSize}");
             //Console.WriteLine("Read");
 
@@ -133,16 +151,12 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
             if (!RawMode)
             {
                 Console.WriteLine("Error: Raw mode not enabled");
-                return null;
+                return false;
             }
-
-            byte[] readBuffer;
 
             {
                 ulong sectorsRemaining = LastSector - FirstSector + 1;
                 ulong readBufferSize = sectorsRemaining * sectorSize;
-
-                using MemoryStream memoryStream = new((int)((LastSector - FirstSector + 1) * sectorSize));
 
                 while (sectorsRemaining != 0)
                 {
@@ -155,7 +169,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                     while (readCount != readBufferSize)
                     {
                         byte[] readData = Firehose.Serial.GetResponse(null, Length: (uint)(readBufferSize - readCount));
-                        memoryStream.Write(readData);
+                        outputStream.Write(readData);
                         readCount += (ulong)readData.LongLength;
                     }
 
@@ -163,8 +177,6 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                     sectorsRemaining -= sectorCount;
                     readBufferSize = sectorsRemaining * sectorSize;
                 }
-
-                readBuffer = memoryStream.ToArray();
             }
 
             GotResponse = false;
@@ -204,7 +216,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                 }
             }
 
-            return readBuffer;
+            return true;
         }
 
         public static bool Reset(this QualcommFirehose Firehose, bool Verbose, PowerValue powerValue = PowerValue.Reset, uint delayInSeconds = 1)
