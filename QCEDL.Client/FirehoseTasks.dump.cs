@@ -193,9 +193,21 @@ namespace QCEDL.Client
                                     Logging.Log($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
                                     Logging.Log();
 
-                                    SectorBasedReader sectorBasedReader = new EDLSectorReader(Firehose, i, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes, storageInfo);
-                                    using LUNStream test = new(sectorBasedReader);
-                                    ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{i}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose, (uint)response.MaxPayloadSizeToTargetInBytes);
+                                    SetupHelper.SetupContainers();
+
+                                    long diskCapacity = storageInfo.storage_info.block_size * (long)storageInfo.storage_info.total_blocks;
+                                    using Stream fs = new FileStream(Path.Combine(VhdxOutputPath, $"LUN{i}.vhdx"), FileMode.CreateNew, FileAccess.ReadWrite);
+                                    using DiscUtils.Vhdx.Disk outDisk = DiscUtils.Vhdx.Disk.InitializeDynamic(fs, Ownership.None, diskCapacity, Geometry.FromCapacity(diskCapacity, storageInfo.storage_info.block_size));
+
+                                    outDisk.Content.Seek(0, SeekOrigin.Begin);
+
+                                    Logging.Log("Converting RAW to VHDX");
+                                    Firehose.Read(storageType, (uint)i, (uint)storageInfo.storage_info.block_size, 0, (uint)(storageInfo.storage_info.total_blocks - 1), Verbose, response.MaxPayloadSizeToTargetInBytes, outDisk.Content, (int percentage, TimeSpan? remaining) =>
+                                    {
+                                        Logging.Log(
+                                            $"{Logging.GetDISMLikeProgressBar((uint)percentage)} {remaining:hh\\:mm\\:ss\\.f}",
+                                            returnLine: Verbose);
+                                    }, null);
                                     Logging.Log();
                                 }
                                 break;
@@ -255,10 +267,23 @@ namespace QCEDL.Client
                                 Logging.Log($"LUN[{Lun}] Block Size: {storageInfo.storage_info.block_size}");
                                 Logging.Log();
 
-                                SectorBasedReader sectorBasedReader = new EDLSectorReader(Firehose, Lun, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes, storageInfo);
-                                using LUNStream test = new(sectorBasedReader);
-                                ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{Lun}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose, (uint)response.MaxPayloadSizeToTargetInBytes);
+                                SetupHelper.SetupContainers();
+
+                                long diskCapacity = storageInfo.storage_info.block_size * (long)storageInfo.storage_info.total_blocks;
+                                using Stream fs = new FileStream(Path.Combine(VhdxOutputPath, $"LUN{Lun}.vhdx"), FileMode.CreateNew, FileAccess.ReadWrite);
+                                using DiscUtils.Vhdx.Disk outDisk = DiscUtils.Vhdx.Disk.InitializeDynamic(fs, Ownership.None, diskCapacity, Geometry.FromCapacity(diskCapacity, storageInfo.storage_info.block_size));
+
+                                outDisk.Content.Seek(0, SeekOrigin.Begin);
+
+                                Logging.Log("Converting RAW to VHDX");
+                                Firehose.Read(storageType, (uint)Lun, (uint)storageInfo.storage_info.block_size, 0, (uint)(storageInfo.storage_info.total_blocks - 1), Verbose, response.MaxPayloadSizeToTargetInBytes, outDisk.Content, (int percentage, TimeSpan? remaining) =>
+                                {
+                                    Logging.Log(
+                                        $"{Logging.GetDISMLikeProgressBar((uint)percentage)} {remaining:hh\\:mm\\:ss\\.f}",
+                                        returnLine: Verbose);
+                                }, null);
                                 Logging.Log();
+
                                 break;
                             }
                         default:
@@ -478,7 +503,6 @@ namespace QCEDL.Client
                                         long diskCapacity = partStream.Length;
                                         fileStream.SetLength(diskCapacity);
 
-
                                         StreamPump pump = new()
                                         {
                                             InputStream = partStream,
@@ -529,42 +553,6 @@ namespace QCEDL.Client
                 Logging.Log();
                 Logging.Log("END FirehoseDumpStoragePartitionByNameAndLUN");
             }
-        }
-
-        /// <summary>
-        ///     Coverts a raw DD image into a VHD file suitable for FFU imaging.
-        /// </summary>
-        /// <param name="ddfile">The path to the DD file.</param>
-        /// <param name="vhdfile">The path to the output VHD file.</param>
-        /// <returns></returns>
-        private static void ConvertDD2VHD(string vhdfile, uint SectorSize, Stream inputStream, bool Verbose, uint MaxPayloadSizeToTargetInBytes)
-        {
-            SetupHelper.SetupContainers();
-
-            using DiscUtils.Raw.Disk inDisk = new(inputStream, Ownership.Dispose);
-
-            long diskCapacity = inputStream.Length;
-            using Stream fs = new FileStream(vhdfile, FileMode.CreateNew, FileAccess.ReadWrite);
-            using DiscUtils.Vhdx.Disk outDisk = DiscUtils.Vhdx.Disk.InitializeDynamic(fs, Ownership.None, diskCapacity, Geometry.FromCapacity(diskCapacity, (int)SectorSize));
-            SparseStream contentStream = inDisk.Content;
-
-            StreamPump pump = new()
-            {
-                InputStream = contentStream,
-                OutputStream = outDisk.Content,
-                SparseCopy = true,
-                SparseChunkSize = (int)SectorSize,
-                BufferSize = (int)MaxPayloadSizeToTargetInBytes
-            };
-
-            long totalBytes = contentStream.Length;
-
-            DateTime now = DateTime.Now;
-            pump.ProgressEvent += (o, e) => { ShowProgress((ulong)e.BytesRead, (ulong)totalBytes, now, Verbose); };
-
-            Logging.Log("Converting RAW to VHDX");
-            pump.Run();
-            Logging.Log();
         }
 
         private static void ShowProgress(ulong readBytes, ulong totalBytes, DateTime startTime, bool Verbose)

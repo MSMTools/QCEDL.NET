@@ -21,6 +21,8 @@
 // Some of the classes and functions in this file were found online.
 // Where possible the original authors are referenced.
 
+using System.Diagnostics;
+
 namespace QCEDL.NET
 {
     public class ProgressUpdater
@@ -61,7 +63,7 @@ namespace QCEDL.NET
                 if (DateTime.Now - LastUpdateTime > TimeSpan.FromSeconds(0.5) || ProgressPercentage == 100)
                 {
 #if DEBUG
-                    Console.WriteLine("Init time: " + InitTime.ToShortTimeString() + " / Now: " + DateTime.Now.ToString() + " / NewValue: " + NewValue.ToString() + " / MaxValue: " + MaxValue.ToString() + " ->> Percentage: " + ProgressPercentage.ToString() + " / Remaining: " + TimeSpan.FromTicks((long)((DateTime.Now - InitTime).Ticks / ((double)NewValue / MaxValue) * (1 - (double)NewValue / MaxValue))).ToString());
+                    Debug.WriteLine("Init time: " + InitTime.ToShortTimeString() + " / Now: " + DateTime.Now.ToString() + " / NewValue: " + NewValue.ToString() + " / MaxValue: " + MaxValue.ToString() + " ->> Percentage: " + ProgressPercentage.ToString() + " / Remaining: " + TimeSpan.FromTicks((long)((DateTime.Now - InitTime).Ticks / ((double)NewValue / MaxValue) * (1 - (double)NewValue / MaxValue))).ToString());
 #endif
 
                     if (DateTime.Now - InitTime < TimeSpan.FromSeconds(30) && ProgressPercentage < 15)
