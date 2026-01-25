@@ -1,6 +1,7 @@
 ﻿using QCEDL.NET.PartitionTable;
 using Qualcomm.EmergencyDownload.ChipInfo;
 using Qualcomm.EmergencyDownload.Layers.APSS.Firehose;
+using Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo;
 using Qualcomm.EmergencyDownload.Layers.APSS.Firehose.Xml.Elements;
 using Qualcomm.EmergencyDownload.Layers.PBL.Sahara;
 using Qualcomm.EmergencyDownload.Transport;
@@ -34,27 +35,11 @@ namespace QCEDL.Client
 
         private static void ReadGPTs(QualcommFirehose Firehose, StorageType storageType, bool Verbose, int MaxPayloadSizeToTargetInBytes)
         {
-            List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
-
-            // Figure out the number of LUNs first.
-            Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
-            if (mainInfo != null)
-            {
-                luStorageInfos.Add(mainInfo);
-
-                int totalLuns = mainInfo.storage_info.num_physical;
-
-                // Now figure out the size of each lun
-                for (int i = 1; i < totalLuns; i++)
-                {
-                    Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
-                    luStorageInfos.Add(luInfo);
-                }
-            }
+            List<Root> luStorageInfos = GetStorageInfos(Firehose, storageType, Verbose, MaxPayloadSizeToTargetInBytes);
 
             for (int i = 0; i < luStorageInfos.Count; i++)
             {
-                Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[i];
+                Root storageInfo = luStorageInfos[i];
 
                 Logging.Log();
                 Logging.Log($"LUN[{i}] Name: {storageInfo.storage_info.prod_name}");

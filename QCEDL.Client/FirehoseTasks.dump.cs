@@ -11,6 +11,114 @@ namespace QCEDL.Client
 {
     internal partial class FirehoseTasks
     {
+        internal static List<Root> GetStorageInfos(QualcommFirehose Firehose, StorageType storageType, bool Verbose, int MaxPayloadSizeToTargetInBytes)
+        {
+            List<Root> luStorageInfos = [];
+
+            // Figure out the number of LUNs first.
+            Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
+
+            if (mainInfo != null)
+            {
+                luStorageInfos.Add(mainInfo);
+
+                int totalLuns = mainInfo.storage_info.num_physical;
+
+                // Now figure out the size of each lun
+                for (int i = 1; i < totalLuns; i++)
+                {
+                    Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
+                    luStorageInfos.Add(luInfo);
+                }
+            }
+
+            // Two possibilities, we are facing a programmer that locks down getting storage info on secure boot fused devices (MSFT Andromeda), or the device doesnt exist.
+            // As a fallback, try to automatically build up this information
+            if (mainInfo == null)
+            {
+                // First, handle differently whenever we are dealing with an UFS or not
+                // TODO: Check for eMMC storage, if we should not have more than one physical device (user, vs, gpp1, 2, etc)
+
+                List<Root> tempLuStorageInfos = [];
+
+                // We hardcode a generous maximum of 10 luns
+                for (int i = 0; i < 10; i++)
+                {
+                    // For each of these, read the first part
+
+                    GPT? GPT = null;
+
+                    try
+                    {
+                        // We hardcode a sector size of 4096 for this one
+                        // TODO: Dynamically infer this as well
+                        GPT = ReadGPT(Firehose, 4096, storageType, (uint)i, Verbose, MaxPayloadSizeToTargetInBytes);
+                    }
+                    catch (Exception e)
+                    {
+                        Logging.Log(e.ToString());
+                    }
+
+                    if (GPT == null)
+                    {
+                        Logging.Log($"LUN {i}: No GPT found");
+                        continue;
+                    }
+                    else
+                    {
+                        // We temporarily use num_physical as a storage location for which index this lun was.
+                        tempLuStorageInfos.Add(new()
+                        {
+                            storage_info = new()
+                            {
+                                block_size = GPT.SectorSize,
+                                total_blocks = (int)(GPT.Header.LastUsableLBA + 1),
+                                num_physical = i
+                            }
+                        });
+                    }
+                }
+
+                if (tempLuStorageInfos.Count > 0)
+                {
+                    // Now that we iterated through everything, reformat the elements in the list
+                    // First, grab the maximum valid id we obtained
+
+                    int maxValid = tempLuStorageInfos.MaxBy(t => t.storage_info.num_physical)!.storage_info.num_physical;
+
+                    for (int i = 0; i < maxValid + 1; i++)
+                    {
+                        Root? storageInfo = tempLuStorageInfos.FirstOrDefault(t => t!.storage_info.num_physical == i, null);
+                        if (storageInfo != null)
+                        {
+                            // Rectify the num physical property to reflect the correct amount of physical luns
+                            storageInfo.storage_info.num_physical = maxValid + 1;
+                            luStorageInfos.Add(storageInfo);
+                        }
+                        else
+                        {
+                            // This is one of those luns we couldn't read at all.
+                            // Lets be a minimum "generous" and create a dummy storage info structure with barely any available block to spare
+
+                            // We hardcode a sector size of 4096 for this one
+                            // TODO: Dynamically infer this as well
+                            luStorageInfos.Add(new()
+                            {
+                                storage_info = new()
+                                {
+                                    block_size = 4096,
+                                    total_blocks = 1,
+                                    num_physical = maxValid + 1
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            return luStorageInfos;
+        }
+
         internal static async Task FirehoseDumpStorage(string DevicePath, string ProgrammerPath, string VhdxOutputPath, StorageType storageType, bool Verbose)
         {
             Logging.Log("START FirehoseDumpStorage");
@@ -32,23 +140,7 @@ namespace QCEDL.Client
                         case StorageType.UFS:
                         case StorageType.SPINOR:
                             {
-                                List<Root> luStorageInfos = [];
-
-                                // Figure out the number of LUNs first.
-                                Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
-                                if (mainInfo != null)
-                                {
-                                    luStorageInfos.Add(mainInfo);
-
-                                    int totalLuns = mainInfo.storage_info.num_physical;
-
-                                    // Now figure out the size of each lun
-                                    for (int i = 1; i < totalLuns; i++)
-                                    {
-                                        Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
-                                        luStorageInfos.Add(luInfo);
-                                    }
-                                }
+                                List<Root> luStorageInfos = GetStorageInfos(Firehose, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes);
 
                                 for (int i = 0; i < luStorageInfos.Count; i++)
                                 {
@@ -106,23 +198,7 @@ namespace QCEDL.Client
                         case StorageType.UFS:
                         case StorageType.SPINOR:
                             {
-                                List<Root> luStorageInfos = [];
-
-                                // Figure out the number of LUNs first.
-                                Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
-                                if (mainInfo != null)
-                                {
-                                    luStorageInfos.Add(mainInfo);
-
-                                    int totalLuns = mainInfo.storage_info.num_physical;
-
-                                    // Now figure out the size of each lun
-                                    for (int i = 1; i < totalLuns; i++)
-                                    {
-                                        Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
-                                        luStorageInfos.Add(luInfo);
-                                    }
-                                }
+                                List<Root> luStorageInfos = GetStorageInfos(Firehose, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes);
 
                                 if (luStorageInfos.Count <= Lun)
                                 {
@@ -183,23 +259,7 @@ namespace QCEDL.Client
                         case StorageType.UFS:
                         case StorageType.SPINOR:
                             {
-                                List<Root> luStorageInfos = [];
-
-                                // Figure out the number of LUNs first.
-                                Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
-                                if (mainInfo != null)
-                                {
-                                    luStorageInfos.Add(mainInfo);
-
-                                    int totalLuns = mainInfo.storage_info.num_physical;
-
-                                    // Now figure out the size of each lun
-                                    for (int i = 1; i < totalLuns; i++)
-                                    {
-                                        Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
-                                        luStorageInfos.Add(luInfo);
-                                    }
-                                }
+                                List<Root> luStorageInfos = GetStorageInfos(Firehose, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes);
 
                                 bool PartitionFound = false;
 
@@ -322,23 +382,7 @@ namespace QCEDL.Client
                         case StorageType.UFS:
                         case StorageType.SPINOR:
                             {
-                                List<Root> luStorageInfos = [];
-
-                                // Figure out the number of LUNs first.
-                                Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
-                                if (mainInfo != null)
-                                {
-                                    luStorageInfos.Add(mainInfo);
-
-                                    int totalLuns = mainInfo.storage_info.num_physical;
-
-                                    // Now figure out the size of each lun
-                                    for (int i = 1; i < totalLuns; i++)
-                                    {
-                                        Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
-                                        luStorageInfos.Add(luInfo);
-                                    }
-                                }
+                                List<Root> luStorageInfos = GetStorageInfos(Firehose, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes);
 
                                 bool PartitionFound = false;
 

@@ -2,7 +2,7 @@
   "profiles": {
     "QCEDL.Client": {
       "commandName": "Project",
-      "commandLineArgs": "firehose-reset -f \"C:\\Users\\Gus\\Downloads\\Telegram Desktop\\surface-neon-edl\\fh_loader\\prog_firehose_ddr.elf\" -p Reset"
+      "commandLineArgs": "firehose-dumpstoragelun -f \"C:\\Users\\Gus\\Downloads\\Telegram Desktop\\surface-neon-edl\\fh_loader\\prog_firehose_ddr.elf\" -s UFS -l 4 -o ."
     }
   }
 }
