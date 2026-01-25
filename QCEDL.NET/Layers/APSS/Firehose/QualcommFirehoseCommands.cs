@@ -30,7 +30,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
             Console.WriteLine("Configuring");
 
             string Command03 = QualcommFirehoseXml.BuildCommandPacket([
-                QualcommFirehoseXmlPackets.GetConfigurePacket(storageType, true, maxPayloadSizeToTargetInBytes, false, 8192, true, false)
+                QualcommFirehoseXmlPackets.GetConfigurePacket(storageType, Verbose, maxPayloadSizeToTargetInBytes, false, 8192, true, false)
             ]);
 
             Firehose.Serial.SendData(Encoding.UTF8.GetBytes(Command03));
