@@ -75,7 +75,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
             catch
             {
                 Console.WriteLine("UNEXPECTED PARSING FAILURE. ABOUT TO CRASH. PAYLOAD BYTE RAW AS FOLLOW:");
-                Console.WriteLine(BitConverter.ToString(ResponseBuffer).Replace("-", ""));
+                Console.WriteLine(Convert.ToHexString(ResponseBuffer));
                 throw;
             }
         }
