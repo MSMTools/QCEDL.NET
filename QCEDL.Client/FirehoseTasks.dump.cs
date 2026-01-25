@@ -3,6 +3,7 @@ using DiscUtils.Containers;
 using DiscUtils.Streams;
 using QCEDL.NET.PartitionTable;
 using Qualcomm.EmergencyDownload.Layers.APSS.Firehose;
+using Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo;
 using Qualcomm.EmergencyDownload.Layers.APSS.Firehose.Xml.Elements;
 using Qualcomm.EmergencyDownload.Transport;
 
@@ -31,10 +32,10 @@ namespace QCEDL.Client
                         case StorageType.UFS:
                         case StorageType.SPINOR:
                             {
-                                List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
+                                List<Root> luStorageInfos = [];
 
                                 // Figure out the number of LUNs first.
-                                Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
+                                Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
                                 if (mainInfo != null)
                                 {
                                     luStorageInfos.Add(mainInfo);
@@ -44,14 +45,14 @@ namespace QCEDL.Client
                                     // Now figure out the size of each lun
                                     for (int i = 1; i < totalLuns; i++)
                                     {
-                                        Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
+                                        Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
                                         luStorageInfos.Add(luInfo);
                                     }
                                 }
 
                                 for (int i = 0; i < luStorageInfos.Count; i++)
                                 {
-                                    Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[i];
+                                    Root storageInfo = luStorageInfos[i];
 
                                     Logging.Log();
                                     Logging.Log($"LUN[{i}] Name: {storageInfo.storage_info.prod_name}");
@@ -105,10 +106,10 @@ namespace QCEDL.Client
                         case StorageType.UFS:
                         case StorageType.SPINOR:
                             {
-                                List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
+                                List<Root> luStorageInfos = [];
 
                                 // Figure out the number of LUNs first.
-                                Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
+                                Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
                                 if (mainInfo != null)
                                 {
                                     luStorageInfos.Add(mainInfo);
@@ -118,7 +119,7 @@ namespace QCEDL.Client
                                     // Now figure out the size of each lun
                                     for (int i = 1; i < totalLuns; i++)
                                     {
-                                        Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
+                                        Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
                                         luStorageInfos.Add(luInfo);
                                     }
                                 }
@@ -129,7 +130,7 @@ namespace QCEDL.Client
                                     return;
                                 }
 
-                                Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[Lun];
+                                Root storageInfo = luStorageInfos[Lun];
 
                                 Logging.Log();
                                 Logging.Log($"LUN[{Lun}] Name: {storageInfo.storage_info.prod_name}");
@@ -182,10 +183,10 @@ namespace QCEDL.Client
                         case StorageType.UFS:
                         case StorageType.SPINOR:
                             {
-                                List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
+                                List<Root> luStorageInfos = [];
 
                                 // Figure out the number of LUNs first.
-                                Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
+                                Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
                                 if (mainInfo != null)
                                 {
                                     luStorageInfos.Add(mainInfo);
@@ -195,7 +196,7 @@ namespace QCEDL.Client
                                     // Now figure out the size of each lun
                                     for (int i = 1; i < totalLuns; i++)
                                     {
-                                        Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
+                                        Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
                                         luStorageInfos.Add(luInfo);
                                     }
                                 }
@@ -204,7 +205,7 @@ namespace QCEDL.Client
 
                                 for (int i = 0; i < luStorageInfos.Count; i++)
                                 {
-                                    Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[i];
+                                    Root storageInfo = luStorageInfos[i];
 
                                     Logging.Log();
                                     Logging.Log($"LUN[{i}] Name: {storageInfo.storage_info.prod_name}");
@@ -253,7 +254,7 @@ namespace QCEDL.Client
                                                 OutputStream = fileStream,
                                                 SparseCopy = true,
                                                 SparseChunkSize = storageInfo.storage_info.block_size,
-                                                BufferSize = storageInfo.storage_info.block_size * 256 // Max 24 sectors at a time
+                                                BufferSize = response.MaxPayloadSizeToTargetInBytes
                                             };
 
                                             long totalBytes = partStream.Length;
@@ -321,10 +322,10 @@ namespace QCEDL.Client
                         case StorageType.UFS:
                         case StorageType.SPINOR:
                             {
-                                List<Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root> luStorageInfos = [];
+                                List<Root> luStorageInfos = [];
 
                                 // Figure out the number of LUNs first.
-                                Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
+                                Root? mainInfo = Firehose.GetStorageInfo(Verbose, storageType);
                                 if (mainInfo != null)
                                 {
                                     luStorageInfos.Add(mainInfo);
@@ -334,7 +335,7 @@ namespace QCEDL.Client
                                     // Now figure out the size of each lun
                                     for (int i = 1; i < totalLuns; i++)
                                     {
-                                        Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
+                                        Root? luInfo = Firehose.GetStorageInfo(Verbose, storageType, (uint)i) ?? throw new Exception($"Error in reading LUN {i} for storage info!");
                                         luStorageInfos.Add(luInfo);
                                     }
                                 }
@@ -342,7 +343,7 @@ namespace QCEDL.Client
                                 bool PartitionFound = false;
 
                                 // Test workaround for Duo 2 programmer
-                                //luStorageInfos.Add(new Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root() { storage_info = new Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.StorageInfo() { block_size = 4096, total_blocks = 10000000, num_physical = 0 } });
+                                //luStorageInfos.Add(new Root() { storage_info = new StorageInfo() { block_size = 4096, total_blocks = 10000000, num_physical = 0 } });
 
                                 if (luStorageInfos.Count <= Lun)
                                 {
@@ -350,7 +351,7 @@ namespace QCEDL.Client
                                     return;
                                 }
 
-                                Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root storageInfo = luStorageInfos[Lun];
+                                Root storageInfo = luStorageInfos[Lun];
 
                                 Logging.Log();
                                 Logging.Log($"LUN[{Lun}] Name: {storageInfo.storage_info.prod_name}");
@@ -399,7 +400,7 @@ namespace QCEDL.Client
                                             OutputStream = fileStream,
                                             SparseCopy = true,
                                             SparseChunkSize = storageInfo.storage_info.block_size,
-                                            BufferSize = response.MaxPayloadSizeToTargetInBytes//storageInfo.storage_info.block_size * 256 // Max 24 sectors at a time
+                                            BufferSize = response.MaxPayloadSizeToTargetInBytes
                                         };
 
                                         long totalBytes = partStream.Length;
