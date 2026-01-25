@@ -36,10 +36,9 @@ namespace QCEDL.Client
             // As a fallback, try to automatically build up this information
             if (mainInfo == null)
             {
-                // First, handle differently whenever we are dealing with an UFS or not
-                // TODO: Check for eMMC storage, if we should not have more than one physical device (user, vs, gpp1, 2, etc)
-
                 List<Root> tempLuStorageInfos = [];
+
+                uint sectorSize = 0;
 
                 // We hardcode a generous maximum of 10 luns
                 for (int i = 0; i < 10; i++)
@@ -50,13 +49,55 @@ namespace QCEDL.Client
 
                     try
                     {
-                        // We hardcode a sector size of 4096 for this one
-                        // TODO: Dynamically infer this as well
-                        GPT = ReadGPT(Firehose, 4096, storageType, (uint)i, Verbose, MaxPayloadSizeToTargetInBytes);
+                        if (sectorSize != 0)
+                        {
+                            GPT = ReadGPT(Firehose, sectorSize, storageType, (uint)i, Verbose, MaxPayloadSizeToTargetInBytes);
+                        }
+                        else
+                        {
+                            // We hardcode a sector size of 4096 for this one
+                            GPT = ReadGPT(Firehose, 4096, storageType, (uint)i, Verbose, MaxPayloadSizeToTargetInBytes);
+
+                            if (GPT != null)
+                            {
+                                // Confirm it
+                                sectorSize = 4096;
+                            }
+                            else
+                            {
+                                // Backoff with 512 instead
+                                GPT = ReadGPT(Firehose, 512, storageType, (uint)i, Verbose, MaxPayloadSizeToTargetInBytes);
+
+                                if (GPT != null)
+                                {
+                                    // Confirm it
+                                    sectorSize = 512;
+                                }
+                            }
+                        }
                     }
                     catch (Exception e)
                     {
                         Logging.Log(e.ToString());
+
+                        if (sectorSize == 0)
+                        {
+                            // Backoff with 512 instead
+                            try
+                            {
+                                GPT = ReadGPT(Firehose, 512, storageType, (uint)i, Verbose, MaxPayloadSizeToTargetInBytes);
+
+                                if (GPT != null)
+                                {
+                                    // Confirm it
+                                    sectorSize = 512;
+                                }
+                            }
+                            catch (Exception e2)
+                            {
+                                Logging.Log(e2.ToString());
+                            }
+                        }
                     }
 
                     if (GPT == null)
@@ -106,7 +147,7 @@ namespace QCEDL.Client
                             {
                                 storage_info = new()
                                 {
-                                    block_size = 4096,
+                                    block_size = (int)sectorSize,
                                     total_blocks = 1,
                                     num_physical = maxValid + 1
                                 }
