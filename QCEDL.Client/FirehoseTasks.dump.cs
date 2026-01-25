@@ -180,6 +180,7 @@ namespace QCEDL.Client
                     {
                         case StorageType.UFS:
                         case StorageType.SPINOR:
+                        case StorageType.SDCC:
                             {
                                 List<Root> luStorageInfos = GetStorageInfos(Firehose, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes);
 

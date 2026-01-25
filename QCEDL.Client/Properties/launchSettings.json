@@ -2,7 +2,7 @@
   "profiles": {
     "QCEDL.Client": {
       "commandName": "Project",
-      "commandLineArgs": "firehose-dumpstorage -f \"C:\\Users\\Gus\\Documents\\Github\\QCEDL.NET\\QCEDL.Client\\bin\\ARM64\\Debug\\net10.0-windows\\prog_emmc_firehose_8992.mbn\" -s SDCC -o . -v"
+      "commandLineArgs": "firehose-dumpstorage -f \"C:\\Users\\Gus\\Downloads\\MSM8992.mbn\" -s SDCC -o . -v"
     }
   }
 }
