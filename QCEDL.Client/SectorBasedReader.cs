@@ -1,6 +1,6 @@
 ﻿namespace QCEDL.Client
 {
-    internal interface SectorBasedReader
+    public interface SectorBasedReader
     {
         public ulong GetSectorSize();
 

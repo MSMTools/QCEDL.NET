@@ -1,34 +1,13 @@
-﻿using Qualcomm.EmergencyDownload.Layers.APSS.Firehose;
-using Qualcomm.EmergencyDownload.Layers.APSS.Firehose.Xml.Elements;
-
-namespace QCEDL.Client
+﻿namespace QCEDL.Client
 {
-    public class PartStream : Stream
+    public class PartStream(SectorBasedReader sectorBasedReader, ulong firstSector, ulong lastSector) : Stream
     {
-        private readonly SectorBasedReader sectorBasedReader;
+        private readonly SectorBasedReader sectorBasedReader = sectorBasedReader;
 
-        private long currentPosition;
+        private long currentPosition = 0;
 
-        private readonly ulong firstSector;
-        private readonly ulong lastSector;
-
-        public PartStream(QualcommFirehose Firehose, int physicalPartitionNumber, StorageType storageType, bool Verbose, ulong firstSector, ulong lastSector, int MaxPayloadSizeToTargetInBytes)
-        {
-            sectorBasedReader = new EDLSectorReader(Firehose, physicalPartitionNumber, storageType, Verbose, MaxPayloadSizeToTargetInBytes);
-            currentPosition = 0;
-
-            this.firstSector = firstSector;
-            this.lastSector = lastSector;
-        }
-
-        public PartStream(QualcommFirehose Firehose, int physicalPartitionNumber, StorageType storageType, bool Verbose, ulong firstSector, ulong lastSector, int MaxPayloadSizeToTargetInBytes, Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root luInfo)
-        {
-            sectorBasedReader = new EDLSectorReader(Firehose, physicalPartitionNumber, storageType, Verbose, MaxPayloadSizeToTargetInBytes, luInfo);
-            currentPosition = 0;
-
-            this.firstSector = firstSector;
-            this.lastSector = lastSector;
-        }
+        private readonly ulong firstSector = firstSector;
+        private readonly ulong lastSector = lastSector;
 
         public override bool CanRead => true;
 

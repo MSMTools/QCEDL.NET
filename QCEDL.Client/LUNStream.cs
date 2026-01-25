@@ -1,25 +1,10 @@
-﻿using Qualcomm.EmergencyDownload.Layers.APSS.Firehose;
-using Qualcomm.EmergencyDownload.Layers.APSS.Firehose.Xml.Elements;
-
-namespace QCEDL.Client
+﻿namespace QCEDL.Client
 {
-    public class LUNStream : Stream
+    public class LUNStream(SectorBasedReader sectorBasedReader) : Stream
     {
-        private readonly SectorBasedReader sectorBasedReader;
+        private readonly SectorBasedReader sectorBasedReader = sectorBasedReader;
 
-        private long currentPosition;
-
-        public LUNStream(QualcommFirehose Firehose, int physicalPartitionNumber, StorageType storageType, bool Verbose, int MaxPayloadSizeToTargetInBytes)
-        {
-            sectorBasedReader = new EDLSectorReader(Firehose, physicalPartitionNumber, storageType, Verbose, MaxPayloadSizeToTargetInBytes);
-            currentPosition = 0;
-        }
-
-        public LUNStream(QualcommFirehose Firehose, int physicalPartitionNumber, StorageType storageType, bool Verbose, int MaxPayloadSizeToTargetInBytes, Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root luInfo)
-        {
-            sectorBasedReader = new EDLSectorReader(Firehose, physicalPartitionNumber, storageType, Verbose, MaxPayloadSizeToTargetInBytes, luInfo);
-            currentPosition = 0;
-        }
+        private long currentPosition = 0;
 
         public override bool CanRead => true;
 

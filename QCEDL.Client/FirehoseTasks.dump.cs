@@ -59,7 +59,8 @@ namespace QCEDL.Client
                                     Logging.Log($"LUN[{i}] Block Size: {storageInfo.storage_info.block_size}");
                                     Logging.Log();
 
-                                    LUNStream test = new(Firehose, i, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes, storageInfo);
+                                    SectorBasedReader sectorBasedReader = new EDLSectorReader(Firehose, i, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes, storageInfo);
+                                    using LUNStream test = new(sectorBasedReader);
                                     ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{i}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose);
                                     Logging.Log();
                                 }
@@ -136,7 +137,8 @@ namespace QCEDL.Client
                                 Logging.Log($"LUN[{Lun}] Block Size: {storageInfo.storage_info.block_size}");
                                 Logging.Log();
 
-                                LUNStream test = new(Firehose, Lun, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes, storageInfo);
+                                SectorBasedReader sectorBasedReader = new EDLSectorReader(Firehose, Lun, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes, storageInfo);
+                                using LUNStream test = new(sectorBasedReader);
                                 ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{Lun}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose);
                                 Logging.Log();
                                 break;
@@ -236,9 +238,10 @@ namespace QCEDL.Client
                                                 throw new Exception("File already exists");
                                             }
 
-                                            FileStream fileStream = File.Create(VhdxOutputPath);
+                                            using FileStream fileStream = File.Create(VhdxOutputPath);
 
-                                            PartStream partStream = new(Firehose, i, storageType, Verbose, partition.FirstLBA, partition.LastLBA, response.MaxPayloadSizeToTargetInBytes, storageInfo);
+                                            SectorBasedReader sectorBasedReader = new EDLSectorReader(Firehose, i, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes, storageInfo);
+                                            using PartStream partStream = new(sectorBasedReader, partition.FirstLBA, partition.LastLBA);
 
                                             long diskCapacity = partStream.Length;
                                             fileStream.SetLength(diskCapacity);
@@ -381,9 +384,10 @@ namespace QCEDL.Client
                                             throw new Exception("File already exists");
                                         }
 
-                                        FileStream fileStream = File.Create(VhdxOutputPath);
+                                        using FileStream fileStream = File.Create(VhdxOutputPath);
 
-                                        PartStream partStream = new(Firehose, Lun, storageType, Verbose, partition.FirstLBA, partition.LastLBA, response.MaxPayloadSizeToTargetInBytes, storageInfo);
+                                        SectorBasedReader sectorBasedReader = new EDLSectorReader(Firehose, Lun, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes, storageInfo);
+                                        using PartStream partStream = new(sectorBasedReader, partition.FirstLBA, partition.LastLBA);
 
                                         long diskCapacity = partStream.Length;
                                         fileStream.SetLength(diskCapacity);
