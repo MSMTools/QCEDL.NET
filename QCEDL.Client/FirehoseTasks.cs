@@ -7,8 +7,6 @@ using Qualcomm.EmergencyDownload.Layers.PBL.Sahara;
 using Qualcomm.EmergencyDownload.Transport;
 using System.Diagnostics;
 using System.Text;
-using System.Xml;
-using System.Xml.Serialization;
 
 namespace QCEDL.Client
 {
@@ -17,7 +15,7 @@ namespace QCEDL.Client
         private static byte[]? ReadGPTBuffer(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition, bool Verbose, int MaxPayloadSizeToTargetInBytes)
         {
             // Read 6 sectors
-            return Firehose.Read(storageType, physicalPartition, sectorSize, 0, 5, Verbose, MaxPayloadSizeToTargetInBytes);
+            return Firehose.Read(storageType, physicalPartition, sectorSize, 0, 5, Verbose, MaxPayloadSizeToTargetInBytes, null, null);
         }
 
         private static GPT? ReadGPT(QualcommFirehose Firehose, uint sectorSize, StorageType storageType, uint physicalPartition, bool Verbose, int MaxPayloadSizeToTargetInBytes)
@@ -178,50 +176,9 @@ namespace QCEDL.Client
 
             if (PassedHandShake && PassedRKH)
             {
-                //bool RawMode = false;
-                bool GotResponse = false;
-
                 try
                 {
-                    while (!GotResponse)
-                    {
-                        Data[] datas = Firehose.GetFirehoseResponseDataPayloads();
-
-                        foreach (Data data in datas)
-                        {
-                            if (data.Log != null)
-                            {
-                                if (Verbose)
-                                {
-                                    Logging.Log("DEVPRG LOG: " + data.Log.Value);
-                                }
-                                else
-                                {
-                                    Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
-                                }
-                            }
-                            else if (data.Response != null)
-                            {
-                                /*if (data.Response.RawMode)
-                                {
-                                    RawMode = true;
-                                }*/
-
-                                GotResponse = true;
-                            }
-                            else
-                            {
-                                XmlSerializer xmlSerializer = new(typeof(Data));
-
-                                using StringWriter sww = new();
-                                using XmlWriter writer = XmlWriter.Create(sww);
-
-                                xmlSerializer.Serialize(writer, data);
-
-                                Logging.Log(sww.ToString());
-                            }
-                        }
-                    }
+                    Firehose.MessageLoop(Verbose);
                 }
                 catch (BadConnectionException) { }
             }

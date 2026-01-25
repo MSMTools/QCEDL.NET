@@ -1,9 +1,10 @@
-﻿using System.Text;
-using System.Xml.Serialization;
-using System.Xml;
+﻿using QCEDL.NET;
 using Qualcomm.EmergencyDownload.Layers.APSS.Firehose.Xml;
 using Qualcomm.EmergencyDownload.Layers.APSS.Firehose.Xml.Elements;
 using System.Diagnostics;
+using System.Text;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 {
@@ -35,9 +36,32 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 
             Firehose.Serial.SendData(Encoding.UTF8.GetBytes(Command03));
 
+            return MessageLoop(Firehose, Verbose);
+        }
+
+        public static byte[]? Read(this QualcommFirehose Firehose, StorageType storageType, uint LUNi, uint sectorSize, uint FirstSector, uint LastSector, bool Verbose, int MaxPayloadSizeToTargetInBytes, Action<int, TimeSpan?>? ProgressUpdateCallback, ProgressUpdater? UpdaterPerSector)
+        {
+            if (LastSector < FirstSector)
+            {
+                throw new InvalidDataException();
+            }
+
+            using MemoryStream memoryStream = new((int)((LastSector - FirstSector + 1) * sectorSize));
+
+            bool result = Read(Firehose, storageType, LUNi, sectorSize, FirstSector, LastSector, Verbose, MaxPayloadSizeToTargetInBytes, memoryStream, ProgressUpdateCallback, UpdaterPerSector);
+            if (!result)
+            {
+                return null;
+            }
+
+            return memoryStream.ToArray();
+        }
+
+        public static Response MessageLoop(this QualcommFirehose Firehose, bool Verbose, Action<string>? logCallback = null)
+        {
             while (true)
             {
-                Data[] datas = Firehose.GetFirehoseResponseDataPayloads();
+                Data[] datas = Firehose.GetFirehoseResponseDataPayloads(true);
 
                 foreach (Data data in datas)
                 {
@@ -51,6 +75,8 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
                         {
                             Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
                         }
+
+                        logCallback?.Invoke(data.Log.Value);
                     }
                     else if (data.Response != null)
                     {
@@ -71,84 +97,25 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
             }
         }
 
-        public static byte[]? Read(this QualcommFirehose Firehose, StorageType storageType, uint LUNi, uint sectorSize, uint FirstSector, uint LastSector, bool Verbose, int MaxPayloadSizeToTargetInBytes)
+        public static bool Read(this QualcommFirehose Firehose, StorageType StorageType, uint LunIndex, uint SectorSize, uint FirstSector, uint LastSector, bool Verbose, int MaxPayloadSizeToTargetInBytes, Stream OutputStream, Action<int, TimeSpan?>? ProgressUpdateCallback, ProgressUpdater? UpdaterPerSector)
         {
             if (LastSector < FirstSector)
             {
                 throw new InvalidDataException();
             }
 
-            using MemoryStream memoryStream = new((int)((LastSector - FirstSector + 1) * sectorSize));
-
-            bool result = Read(Firehose, storageType, LUNi, sectorSize, FirstSector, LastSector, Verbose, MaxPayloadSizeToTargetInBytes, memoryStream);
-            if (!result)
-            {
-                return null;
-            }
-
-            return memoryStream.ToArray();
-        }
-
-        public static bool Read(this QualcommFirehose Firehose, StorageType storageType, uint LUNi, uint sectorSize, uint FirstSector, uint LastSector, bool Verbose, int MaxPayloadSizeToTargetInBytes, Stream outputStream)
-        {
-            if (LastSector < FirstSector)
-            {
-                throw new InvalidDataException();
-            }
-
-            Debug.WriteLine($"READ: FirstSector: {FirstSector} - LastSector: {LastSector} - SectorSize: {sectorSize}");
+            Debug.WriteLine($"READ: FirstSector: {FirstSector} - LastSector: {LastSector} - SectorSize: {SectorSize}");
             //Console.WriteLine("Read");
 
             string Command03 = QualcommFirehoseXml.BuildCommandPacket([
-                QualcommFirehoseXmlPackets.GetReadPacket(storageType, LUNi, sectorSize, FirstSector, LastSector)
+                QualcommFirehoseXmlPackets.GetReadPacket(StorageType, LunIndex, SectorSize, FirstSector, LastSector)
             ]);
 
             Firehose.Serial.SendData(Encoding.UTF8.GetBytes(Command03));
 
-            bool RawMode = false;
-            bool GotResponse = false;
+            Response response = MessageLoop(Firehose, Verbose);
 
-            while (!GotResponse)
-            {
-                Data[] datas = Firehose.GetFirehoseResponseDataPayloads(true);
-
-                foreach (Data data in datas)
-                {
-                    if (data.Log != null)
-                    {
-                        if (Verbose)
-                        {
-                            Console.WriteLine("DEVPRG LOG: " + data.Log.Value);
-                        }
-                        else
-                        {
-                            Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
-                        }
-                    }
-                    else if (data.Response != null)
-                    {
-                        if (data.Response.RawMode)
-                        {
-                            RawMode = true;
-                        }
-
-                        GotResponse = true;
-                    }
-                    else
-                    {
-                        XmlSerializer xmlSerializer = new(typeof(Data));
-
-                        using StringWriter sww = new();
-                        using XmlWriter writer = XmlWriter.Create(sww);
-
-                        xmlSerializer.Serialize(writer, data);
-
-                        Console.WriteLine(sww.ToString());
-                    }
-                }
-            }
-
-            if (!RawMode)
+            if (!response.RawMode)
             {
                 Console.WriteLine("Error: Raw mode not enabled");
                 return false;
@@ -156,65 +123,39 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 
             {
                 ulong sectorsRemaining = LastSector - FirstSector + 1;
-                ulong readBufferSize = sectorsRemaining * sectorSize;
+                ulong readBufferSize = sectorsRemaining * SectorSize;
+
+                ProgressUpdater? Progress = UpdaterPerSector;
+                if (Progress == null && ProgressUpdateCallback != null)
+                {
+                    Progress = new ProgressUpdater(sectorsRemaining, ProgressUpdateCallback);
+                }
 
                 while (sectorsRemaining != 0)
                 {
                     if (readBufferSize > (ulong)MaxPayloadSizeToTargetInBytes)
                     {
-                        readBufferSize = ((ulong)MaxPayloadSizeToTargetInBytes / sectorSize) * sectorSize;
+                        readBufferSize = ((ulong)MaxPayloadSizeToTargetInBytes / SectorSize) * SectorSize;
                     }
 
                     ulong readCount = 0;
                     while (readCount != readBufferSize)
                     {
                         byte[] readData = Firehose.Serial.GetResponse(null, Length: (uint)(readBufferSize - readCount));
-                        outputStream.Write(readData);
+                        OutputStream.Write(readData);
                         readCount += (ulong)readData.LongLength;
                     }
 
-                    ulong sectorCount = readBufferSize / sectorSize;
+                    ulong sectorCount = readBufferSize / SectorSize;
+
+                    Progress?.IncreaseProgress(sectorCount);
+
                     sectorsRemaining -= sectorCount;
-                    readBufferSize = sectorsRemaining * sectorSize;
+                    readBufferSize = sectorsRemaining * SectorSize;
                 }
             }
 
-            GotResponse = false;
-
-            while (!GotResponse)
-            {
-                Data[] datas = Firehose.GetFirehoseResponseDataPayloads();
-
-                foreach (Data data in datas)
-                {
-                    if (data.Log != null)
-                    {
-                        if (Verbose)
-                        {
-                            Console.WriteLine("DEVPRG LOG: " + data.Log.Value);
-                        }
-                        else
-                        {
-                            Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
-                        }
-                    }
-                    else if (data.Response != null)
-                    {
-                        GotResponse = true;
-                    }
-                    else
-                    {
-                        XmlSerializer xmlSerializer = new(typeof(Data));
-
-                        using StringWriter sww = new();
-                        using XmlWriter writer = XmlWriter.Create(sww);
-
-                        xmlSerializer.Serialize(writer, data);
-
-                        Console.WriteLine(sww.ToString());
-                    }
-                }
-            }
+            MessageLoop(Firehose, Verbose);
 
             return true;
         }
@@ -229,48 +170,7 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 
             Firehose.Serial.SendData(Encoding.UTF8.GetBytes(Command03));
 
-            //bool RawMode = false;
-            bool GotResponse = false;
-
-            while (!GotResponse)
-            {
-                Data[] datas = Firehose.GetFirehoseResponseDataPayloads();
-
-                foreach (Data data in datas)
-                {
-                    if (data.Log != null)
-                    {
-                        if (Verbose)
-                        {
-                            Console.WriteLine("DEVPRG LOG: " + data.Log.Value);
-                        }
-                        else
-                        {
-                            Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
-                        }
-                    }
-                    else if (data.Response != null)
-                    {
-                        /*if (data.Response.RawMode)
-                        {
-                            RawMode = true;
-                        }*/
-
-                        GotResponse = true;
-                    }
-                    else
-                    {
-                        XmlSerializer xmlSerializer = new(typeof(Data));
-
-                        using StringWriter sww = new();
-                        using XmlWriter writer = XmlWriter.Create(sww);
-
-                        xmlSerializer.Serialize(writer, data);
-
-                        Console.WriteLine(sww.ToString());
-                    }
-                }
-            }
+            MessageLoop(Firehose, Verbose);
 
             // Workaround for problem
             // SerialPort is sometimes not disposed correctly when the device is already removed.
@@ -290,49 +190,15 @@ namespace Qualcomm.EmergencyDownload.Layers.APSS.Firehose
 
             Firehose.Serial.SendData(Encoding.UTF8.GetBytes(Command03));
 
-            bool GotResponse = false;
-
             string? storageInfoJson = null;
 
-            while (!GotResponse)
+            MessageLoop(Firehose, Verbose, (dataLogValue) =>
             {
-                Data[] datas = Firehose.GetFirehoseResponseDataPayloads();
-
-                foreach (Data data in datas)
+                if (dataLogValue.StartsWith("INFO: {\"storage_info\": "))
                 {
-                    if (data.Log != null)
-                    {
-                        if (data.Log.Value.StartsWith("INFO: {\"storage_info\": "))
-                        {
-                            storageInfoJson = data.Log.Value.Substring(6);
-                        }
-                        
-                        if (Verbose)
-                        {
-                            Console.WriteLine("DEVPRG LOG: " + data.Log.Value);
-                        }
-                        else
-                        {
-                            Debug.WriteLine("DEVPRG LOG: " + data.Log.Value);
-                        }
-                    }
-                    else if (data.Response != null)
-                    {
-                        GotResponse = true;
-                    }
-                    else
-                    {
-                        XmlSerializer xmlSerializer = new(typeof(Data));
-
-                        using StringWriter sww = new();
-                        using XmlWriter writer = XmlWriter.Create(sww);
-
-                        xmlSerializer.Serialize(writer, data);
-
-                        Console.WriteLine(sww.ToString());
-                    }
+                    storageInfoJson = dataLogValue.Substring(6);
                 }
-            }
+            });
 
             if (storageInfoJson == null)
             {

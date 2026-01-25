@@ -21,7 +21,7 @@
 // Some of the classes and functions in this file were found online.
 // Where possible the original authors are referenced.
 
-namespace Qualcomm.EmergencyDownload.Layers.APSS.Fast
+namespace QCEDL.NET
 {
     public class ProgressUpdater
     {

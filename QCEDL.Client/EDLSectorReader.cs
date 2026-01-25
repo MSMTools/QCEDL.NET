@@ -49,13 +49,13 @@ namespace QCEDL.Client
 
         public byte[] ReadSectors(ulong FirstSector, ulong LastSector)
         {
-            byte[]? readBuffer = Firehose.Read(storageType, (uint)physicalPartitionNumber, (uint)storageInfo.storage_info.block_size, (uint)FirstSector, (uint)LastSector, Verbose, MaxPayloadSizeToTargetInBytes);
+            byte[]? readBuffer = Firehose.Read(storageType, (uint)physicalPartitionNumber, (uint)storageInfo.storage_info.block_size, (uint)FirstSector, (uint)LastSector, Verbose, MaxPayloadSizeToTargetInBytes, null, null);
             return readBuffer ?? throw new Exception();
         }
 
         public bool ReadSectors(ulong FirstSector, ulong LastSector, Stream outputStream)
         {
-            return Firehose.Read(storageType, (uint)physicalPartitionNumber, (uint)storageInfo.storage_info.block_size, (uint)FirstSector, (uint)LastSector, Verbose, MaxPayloadSizeToTargetInBytes, outputStream);
+            return Firehose.Read(storageType, (uint)physicalPartitionNumber, (uint)storageInfo.storage_info.block_size, (uint)FirstSector, (uint)LastSector, Verbose, MaxPayloadSizeToTargetInBytes, outputStream, null, null);
         }
     }
 }
