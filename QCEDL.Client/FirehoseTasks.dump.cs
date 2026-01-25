@@ -61,7 +61,7 @@ namespace QCEDL.Client
 
                                     SectorBasedReader sectorBasedReader = new EDLSectorReader(Firehose, i, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes, storageInfo);
                                     using LUNStream test = new(sectorBasedReader);
-                                    ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{i}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose);
+                                    ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{i}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose, (uint)response.MaxPayloadSizeToTargetInBytes);
                                     Logging.Log();
                                 }
                                 break;
@@ -139,7 +139,7 @@ namespace QCEDL.Client
 
                                 SectorBasedReader sectorBasedReader = new EDLSectorReader(Firehose, Lun, storageType, Verbose, response.MaxPayloadSizeToTargetInBytes, storageInfo);
                                 using LUNStream test = new(sectorBasedReader);
-                                ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{Lun}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose);
+                                ConvertDD2VHD(Path.Combine(VhdxOutputPath, $"LUN{Lun}.vhdx"), (uint)storageInfo.storage_info.block_size, test, Verbose, (uint)response.MaxPayloadSizeToTargetInBytes);
                                 Logging.Log();
                                 break;
                             }
@@ -451,7 +451,7 @@ namespace QCEDL.Client
         /// <param name="ddfile">The path to the DD file.</param>
         /// <param name="vhdfile">The path to the output VHD file.</param>
         /// <returns></returns>
-        private static void ConvertDD2VHD(string vhdfile, uint SectorSize, Stream inputStream, bool Verbose)
+        private static void ConvertDD2VHD(string vhdfile, uint SectorSize, Stream inputStream, bool Verbose, uint MaxPayloadSizeToTargetInBytes)
         {
             SetupHelper.SetupContainers();
 
@@ -468,7 +468,7 @@ namespace QCEDL.Client
                 OutputStream = outDisk.Content,
                 SparseCopy = true,
                 SparseChunkSize = (int)SectorSize,
-                BufferSize = (int)SectorSize * 256 // Max 24 sectors at a time
+                BufferSize = (int)MaxPayloadSizeToTargetInBytes
             };
 
             long totalBytes = contentStream.Length;
