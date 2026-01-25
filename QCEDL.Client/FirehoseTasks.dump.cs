@@ -338,6 +338,9 @@ namespace QCEDL.Client
 
                                 bool PartitionFound = false;
 
+                                // Test workaround for Duo 2 programmer
+                                //luStorageInfos.Add(new Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.Root() { storage_info = new Qualcomm.EmergencyDownload.Layers.APSS.Firehose.JSON.StorageInfo.StorageInfo() { block_size = 4096, total_blocks = 10000000, num_physical = 0 } });
+
                                 if (luStorageInfos.Count <= Lun)
                                 {
                                     Logging.Log("Lun not found.");
